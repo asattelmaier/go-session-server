@@ -30,7 +30,7 @@ public class GameClientHandler extends BinaryWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(@NonNull final WebSocketSession session) {
-        logger.info("Game Client connected" + session.getId());
+        logger.info("Game Client connected: " + session.getId());
     }
 
     @Override

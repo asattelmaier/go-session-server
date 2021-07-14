@@ -21,15 +21,11 @@ public class GameClientPool {
         gameClient.ifPresent(availableGameClients::remove);
         gameClient.ifPresent(gameClientsInUse::add);
 
-        return gameClient.orElseGet(this::createGameClient);
+        return gameClient.orElseGet(gameClientFactory::createGameClient);
     }
 
     public void release(final GameClient gameClient) {
         gameClientsInUse.remove(gameClient);
         availableGameClients.add(gameClient);
-    }
-
-    private GameClient createGameClient() {
-        return gameClientFactory.createGameClient();
     }
 }

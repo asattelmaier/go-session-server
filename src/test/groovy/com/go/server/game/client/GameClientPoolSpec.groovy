@@ -1,8 +1,6 @@
-package game.client
+package com.go.server.game.client
 
-import com.go.server.game.client.GameClient
-import com.go.server.game.client.GameClientFactory
-import com.go.server.game.client.GameClientPool
+
 import spock.lang.Specification
 
 

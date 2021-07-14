@@ -18,7 +18,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 public class GameClient {
-    private final static int MESSAGE_BUFFER_SIZE = 1024 * 1024;
+    private final static int MESSAGE_BUFFER_SIZE = 1000 * 1024;
     private final WebSocketSession webSocketSession;
     private final GameClientHandler gameClientHandler;
 

@@ -1,4 +1,4 @@
-package game.session
+package com.go.server.game.session
 
 import com.go.server.game.client.GameClient
 import com.go.server.game.client.GameClientPool
@@ -6,8 +6,6 @@ import com.go.server.game.message.handler.MessageHandler
 import com.go.server.game.message.messages.JoinedMessage
 import com.go.server.game.message.messages.TerminatedMessage
 import com.go.server.game.message.messages.UpdatedMessage
-import com.go.server.game.session.SessionRepository
-import com.go.server.game.session.SessionService
 import com.go.server.game.session.model.Session
 import com.go.server.game.session.model.output.SessionDto
 import spock.lang.Specification

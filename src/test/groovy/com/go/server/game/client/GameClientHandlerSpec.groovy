@@ -1,6 +1,6 @@
-package game.client
+package com.go.server.game.client
 
-import com.go.server.game.client.GameClientHandler
+
 import org.springframework.web.socket.TextMessage
 import org.springframework.web.socket.WebSocketSession
 import spock.lang.Specification

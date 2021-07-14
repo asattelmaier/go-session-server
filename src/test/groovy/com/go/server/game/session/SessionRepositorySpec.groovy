@@ -1,7 +1,6 @@
-package game.session
+package com.go.server.game.session
 
 
-import com.go.server.game.session.SessionRepository
 import com.go.server.game.session.model.Player
 import com.go.server.game.session.model.Session
 import spock.lang.Specification

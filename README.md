@@ -25,5 +25,5 @@ docker build -t go-session-server -f docker/Dockerfile .
 Run Container:
 
 ```bash
-docker run -p 8080:8080 --name go-session-server --env GAME_CLIENT_SOCKET_HOST=host.docker.internal --env GAME_CLIENT_SOCKET_PORT=8000 go-session-server:latest
+docker run -p 8080:8080 --name go-session-server --env GAME_CLIENT_SOCKET_HOST=host.docker.internal --env GAME_CLIENT_SOCKET_PORT=8000 asattelmaier/go-session-server:latest
 ```

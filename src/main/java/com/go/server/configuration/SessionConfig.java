@@ -10,11 +10,17 @@ import java.net.URI;
 @Configuration
 @EnableWebSocketMessageBroker
 public class SessionConfig implements WebSocketMessageBrokerConfigurer {
+    private final static int MESSAGE_BUFFER_SIZE = 1000 * 1024;
     public final static String DESTINATION_PREFIX = "/game/session";
     private final static String ALLOWED_ORIGIN = "*";
     private final static String ENDPOINT = "/";
     @Value("${game.client.socket.url}")
     private String gameClientSocketUrl;
+
+    @Override
+    public void configureWebSocketTransport(final WebSocketTransportRegistration registry) {
+        registry.setMessageSizeLimit(SessionConfig.MESSAGE_BUFFER_SIZE);
+    }
 
     @Override
     public void registerStompEndpoints(final StompEndpointRegistry registry) {
