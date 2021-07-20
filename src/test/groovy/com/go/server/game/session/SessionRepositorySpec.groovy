@@ -13,10 +13,10 @@ class SessionRepositorySpec extends Specification {
         when:
         repository.addSession(Mock(Session))
         repository.addSession(Mock(Session))
-        def sessions = repository.getAll()
+        def numberOfSessions = repository.getAll().size()
 
         then:
-        sessions.size() == 2
+        numberOfSessions == 2
     }
 
     def 'adds not a session if it is already added'() {
@@ -27,10 +27,10 @@ class SessionRepositorySpec extends Specification {
         when:
         repository.addSession(session)
         repository.addSession(session)
-        def sessions = repository.getAll()
+        def numberOfSessions = repository.getAll().size()
 
         then:
-        sessions.size() == 1
+        numberOfSessions == 1
     }
 
     def 'removes a session'() {
@@ -41,11 +41,26 @@ class SessionRepositorySpec extends Specification {
         when:
         repository.addSession(session)
         repository.removeSession(session)
-        def sessions = repository.getAll()
+        def numberOfSessions = repository.getAll().size()
 
 
         then:
-        sessions.size() == 0
+        numberOfSessions == 0
+    }
+
+    def 'removes multiple sessions'() {
+        given:
+        def sessions = [Mock(Session), Mock(Session)]
+        def repository = new SessionRepository()
+
+        when:
+        sessions.forEach(session -> repository.addSession(session))
+        repository.removeSessions(sessions)
+        def numberOfSessions = repository.getAll().size()
+
+
+        then:
+        numberOfSessions == 0
     }
 
     def 'removes nothing if the session did not exists'() {
@@ -56,10 +71,10 @@ class SessionRepositorySpec extends Specification {
         when:
         repository.addSession(session)
         repository.removeSession(Mock(Session))
-        def sessions = repository.getAll()
+        def numberOfSessions = repository.getAll().size()
 
         then:
-        sessions.size() == 1
+        numberOfSessions == 1
     }
 
     def 'returns a session'() {
@@ -71,7 +86,6 @@ class SessionRepositorySpec extends Specification {
         mockSession.has("some-id") >> true
         repository.addSession(mockSession)
         def session = repository.getSession("some-id")
-
 
         then:
         session == mockSession

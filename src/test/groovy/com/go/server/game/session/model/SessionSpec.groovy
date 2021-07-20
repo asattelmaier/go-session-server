@@ -4,6 +4,8 @@ package com.go.server.game.session.model
 import com.go.server.game.session.model.output.PlayerDto
 import spock.lang.Specification
 
+import java.time.LocalTime
+
 class SessionSpec extends Specification {
     def 'notFound creates a session with error'() {
         given:
@@ -65,5 +67,27 @@ class SessionSpec extends Specification {
 
         then:
         !has
+    }
+
+    def 'is in use'() {
+        given:
+        def session = new Session(LocalTime.now().minusSeconds(119))
+
+        when:
+        def isInUse = session.isInUse()
+
+        then:
+        isInUse
+    }
+
+    def 'is unused'() {
+        given:
+        def session = new Session(LocalTime.now().minusSeconds(120))
+
+        when:
+        def isInUse = session.isInUse()
+
+        then:
+        !isInUse
     }
 }

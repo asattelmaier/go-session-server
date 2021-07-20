@@ -2,16 +2,25 @@ package com.go.server.game.session.model;
 
 import com.go.server.game.session.model.output.SessionDto;
 
+import java.time.Duration;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class Session {
+    private final static int MINUTES_UNTIL_UNUSED = 2;
     private final String id = UUID.randomUUID().toString();
     private final List<Player> players = new CopyOnWriteArrayList<>();
     private boolean hasError = false;
     private String errorMessage = "";
+    private LocalTime updated;
+
+    public Session(final LocalTime updated) {
+        this.updated = updated;
+    }
 
     public static Session notFound(final String sessionId) {
         return Session.error("Session with id " + sessionId + " not found");
@@ -22,7 +31,7 @@ public class Session {
     }
 
     public String getId() {
-        return this.id;
+        return id;
     }
 
     public boolean has(final String id) {
@@ -30,7 +39,18 @@ public class Session {
     }
 
     public void terminate() {
-        this.players.clear();
+        players.clear();
+        update();
+    }
+
+    public void update() {
+        updated = LocalTime.now();
+    }
+
+    public boolean isInUse() {
+        final var duration = Duration.between(updated, LocalTime.now());
+
+        return duration.getSeconds() < TimeUnit.MINUTES.toSeconds(MINUTES_UNTIL_UNUSED);
     }
 
     public SessionDto toDto() {
@@ -43,7 +63,7 @@ public class Session {
     }
 
     private static Session error(final String errorMessage) {
-        final var session = new Session();
+        final var session = new Session(LocalTime.now());
 
         session.hasError = true;
         session.errorMessage = errorMessage;

@@ -24,6 +24,10 @@ public class SessionRepository {
         sessions.remove(session);
     }
 
+    public void removeSessions(final List<Session> sessions) {
+        sessions.forEach(this.sessions::remove);
+    }
+
     public Session getSession(final String sessionId) {
         return sessions.stream()
                 .filter(session -> session.has(sessionId))

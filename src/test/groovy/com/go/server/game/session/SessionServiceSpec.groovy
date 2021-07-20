@@ -49,13 +49,16 @@ class SessionServiceSpec extends Specification {
         def messageHandler = Mock(MessageHandler)
         def gameClientPool = Mock(GameClientPool)
         def gameClient = Mock(GameClient)
+        def session = Mock(Session)
         def service = new SessionService(repository, messageHandler, gameClientPool)
 
         when:
+        repository.getSession("some-id") >> session
         gameClientPool.acquire() >> gameClient
         service.updateSession("some-id", new byte[0])
 
         then:
+        1 * session.update()
         1 * messageHandler.send(_ as UpdatedMessage)
         1 * gameClientPool.release(gameClient)
     }
