@@ -12,18 +12,30 @@ between the two clients and the game logic in the [Go Haskell Socket Server](htt
 mvn -B package --file pom.xml
 ```
 
-## Create Docker Container
+## Docker
 
 You must first build the project.
 
-Create Image:
+### Build
 
 ```bash
-docker build -t go-session-server -f docker/Dockerfile .
+# Docker Hub
+docker image build -t asattelmaier/go-session-server:latest -f docker/Dockerfile .
+# Google Cloud
+docker image build -t europe-west1-docker.pkg.dev/PROJECT_ID/go-services/go-session-server:latest -f docker/Dockerfile .
 ```
 
-Run Container:
+### Run
 
 ```bash
 docker run -p 8080:8080 --name go-session-server --env GAME_CLIENT_SOCKET_HOST=host.docker.internal --env GAME_CLIENT_SOCKET_PORT=8000 asattelmaier/go-session-server:latest
+```
+
+### Push
+
+```bash
+# Docker Hub
+docker push asattelmaier/website:latest
+# Google Cloud
+docker push europe-west1-docker.pkg.dev/PROJECT_ID/go-services/go-session-server:latest
 ```
