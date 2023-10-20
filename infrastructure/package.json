@@ -1,0 +1,28 @@
+{
+  "name": "go-infrastructure",
+  "version": "0.1.0",
+  "description": "Infrastructure for the Go Mobile App",
+  "main": "index.ts",
+  "repository": "https://github.com/asattelmaier/go-session-server",
+  "author": "Alexander Sattelmaier",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build": "tsc && cdktf synth",
+    "plan": "cd ./cdktf.out/stacks/$STACK/ && terraform init && terraform plan",
+    "deploy": "cd ./cdktf.out/stacks/$STACK/ && terraform init && terraform apply"
+  },
+  "engines": {
+    "node": ">=18.0"
+  },
+  "dependencies": {
+    "@cdktf/provider-google": "12.0.0",
+    "cdktf": "^0.19.0",
+    "constructs": "^10.3.0"
+  },
+  "devDependencies": {
+    "cdktf-cli": "^0.19.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  }
+}
