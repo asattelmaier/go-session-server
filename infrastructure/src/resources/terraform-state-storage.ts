@@ -1,16 +1,16 @@
 import { Construct } from 'constructs';
 import { StorageBucket } from '@cdktf/provider-google/lib/storage-bucket';
 import { GoogleStack } from '../google-stack/google-stack';
+import { GoogleBackendStack } from '../google-stack/google-backend-stack';
 
 export class TerraformStateStorage extends GoogleStack {
-  public static readonly NAME = 'go-infrastructure-terraform-state-storage';
   private static readonly ID = 'terraform-state-storage';
 
   constructor(scope: Construct) {
     super(scope, TerraformStateStorage.ID);
 
     new StorageBucket(this, 'terraform-state-storage', {
-      name: TerraformStateStorage.NAME,
+      name: GoogleBackendStack.TERRAFORM_STATE_STORAGE_NAME,
       forceDestroy: false,
       location: GoogleStack.DEFAULT_LOCATION,
       storageClass: 'STANDARD',
