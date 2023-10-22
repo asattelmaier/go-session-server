@@ -15,6 +15,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalTime;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -66,6 +67,14 @@ public class SessionService {
         return sessionDto;
     }
 
+    public List<SessionDto> getPendingSessions() {
+        return this.repository.getAllSessions()
+                .stream()
+                .filter(Session::isPending)
+                .map(Session::toDto)
+                .toList();
+    }
+
     private void sendMessage(final String sessionId, final byte[] message) {
         final var gameClient = gameClientPool.acquire();
 
@@ -84,7 +93,7 @@ public class SessionService {
 
     @Scheduled(fixedDelay = REMOVE_UNUSED_SESSIONS_INTERVAL)
     private void removeUnusedSessions() {
-        final var sessions = repository.getAll();
+        final var sessions = repository.getAllSessions();
         final var unusedSessions = sessions
                 .stream()
                 .filter(session -> !session.isInUse())

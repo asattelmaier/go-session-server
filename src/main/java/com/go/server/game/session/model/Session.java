@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class Session {
+    private final static int PLAYERS_PER_SESSION = 2;
     private final static int MINUTES_UNTIL_UNUSED = 2;
     private final String id = UUID.randomUUID().toString();
     private final List<Player> players = new CopyOnWriteArrayList<>();
@@ -24,6 +25,10 @@ public class Session {
 
     public static Session notFound(final String sessionId) {
         return Session.error("Session with id " + sessionId + " not found");
+    }
+
+    public boolean isPending() {
+        return this.players.size() < PLAYERS_PER_SESSION;
     }
 
     public void addPlayer(final Player player) {

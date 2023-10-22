@@ -81,4 +81,19 @@ class SessionServiceSpec extends Specification {
         1 * session.addPlayer({ it.toDto().id == "player-id" })
         1 * messageHandler.send(_ as JoinedMessage)
     }
+
+    def 'returns all sessions'() {
+        given:
+        def repository = Mock(SessionRepository)
+        def messageHandler = Mock(MessageHandler)
+        def gameClientPool = Mock(GameClientPool)
+        def service = new SessionService(repository, messageHandler, gameClientPool)
+
+        when:
+        repository.getAllSessions() >> [Mock(Session), Mock(Session)]
+        def sessions = service.getPendingSessions()
+
+        then:
+        sessions.size() == 2
+    }
 }

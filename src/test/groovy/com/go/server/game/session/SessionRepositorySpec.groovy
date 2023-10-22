@@ -13,7 +13,7 @@ class SessionRepositorySpec extends Specification {
         when:
         repository.addSession(Mock(Session))
         repository.addSession(Mock(Session))
-        def numberOfSessions = repository.getAll().size()
+        def numberOfSessions = repository.getAllSessions().size()
 
         then:
         numberOfSessions == 2
@@ -27,7 +27,7 @@ class SessionRepositorySpec extends Specification {
         when:
         repository.addSession(session)
         repository.addSession(session)
-        def numberOfSessions = repository.getAll().size()
+        def numberOfSessions = repository.getAllSessions().size()
 
         then:
         numberOfSessions == 1
@@ -41,7 +41,7 @@ class SessionRepositorySpec extends Specification {
         when:
         repository.addSession(session)
         repository.removeSession(session)
-        def numberOfSessions = repository.getAll().size()
+        def numberOfSessions = repository.getAllSessions().size()
 
 
         then:
@@ -56,7 +56,7 @@ class SessionRepositorySpec extends Specification {
         when:
         sessions.forEach(session -> repository.addSession(session))
         repository.removeSessions(sessions)
-        def numberOfSessions = repository.getAll().size()
+        def numberOfSessions = repository.getAllSessions().size()
 
 
         then:
@@ -71,7 +71,7 @@ class SessionRepositorySpec extends Specification {
         when:
         repository.addSession(session)
         repository.removeSession(Mock(Session))
-        def numberOfSessions = repository.getAll().size()
+        def numberOfSessions = repository.getAllSessions().size()
 
         then:
         numberOfSessions == 1

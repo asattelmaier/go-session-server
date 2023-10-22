@@ -10,10 +10,10 @@ import org.springframework.messaging.support.GenericMessage;
 import org.springframework.stereotype.Controller;
 
 @Controller
-public class SessionController {
+public class SessionWebsocketController {
     private final SessionService sessionService;
 
-    public SessionController(@NonNull final SessionService sessionService) {
+    public SessionWebsocketController(@NonNull final SessionService sessionService) {
         this.sessionService = sessionService;
     }
 

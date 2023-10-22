@@ -10,7 +10,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class SessionRepository {
     private final List<Session> sessions = new CopyOnWriteArrayList<>();
 
-    public List<Session> getAll() {
+    public List<Session> getAllSessions() {
         return sessions;
     }
 
