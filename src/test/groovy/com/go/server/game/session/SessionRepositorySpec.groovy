@@ -5,6 +5,8 @@ import com.go.server.game.session.model.Player
 import com.go.server.game.session.model.Session
 import spock.lang.Specification
 
+import java.time.LocalTime
+
 class SessionRepositorySpec extends Specification {
     def 'adds a Session'() {
         given:
@@ -102,12 +104,12 @@ class SessionRepositorySpec extends Specification {
 
         then:
         session.toDto().hasError
-        session.toDto().errorMessage == "Session with id some-id not found"
+        session.toDto().errorMessage == "Session with id \"some-id\" not found"
     }
 
     def 'updates a session'() {
         given:
-        def session = new Session()
+        def session = new Session(LocalTime.now())
         def repository = new SessionRepository()
 
         when:
@@ -130,6 +132,21 @@ class SessionRepositorySpec extends Specification {
 
         then:
         session.toDto().hasError
-        session.toDto().errorMessage == "Session with id some-id not found"
+        session.toDto().errorMessage == "Session with id \"some-id\" not found"
+    }
+
+    def 'find a session by player id'() {
+        given:
+        def playerId = UUID.randomUUID()
+        def mockSession = Mock(Session)
+        def repository = new SessionRepository()
+
+        when:
+        repository.addSession(mockSession)
+        mockSession.isPlayerPlaying(playerId) >> true
+        def session = repository.getSessionByPlayerId(playerId)
+
+        then:
+        session.get() == mockSession
     }
 }

@@ -4,6 +4,8 @@ import com.go.server.game.session.model.Session;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Repository
@@ -45,6 +47,12 @@ public class SessionRepository {
         sessions.set(index, session);
 
         return session;
+    }
+
+    public Optional<Session> getSessionByPlayerId(final UUID playerId) {
+        return sessions.stream()
+                .filter(session -> session.isPlayerPlaying(playerId))
+                .findFirst();
     }
 
     private Boolean hasSession(final Session session) {

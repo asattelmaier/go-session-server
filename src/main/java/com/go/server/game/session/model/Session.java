@@ -13,30 +13,52 @@ import java.util.stream.Collectors;
 public class Session {
     private final static int PLAYERS_PER_SESSION = 2;
     private final static int MINUTES_UNTIL_UNUSED = 2;
+    // TODO: Use UUID instead of string
     private final String id = UUID.randomUUID().toString();
     private final List<Player> players = new CopyOnWriteArrayList<>();
     private boolean hasError = false;
     private String errorMessage = "";
     private LocalTime updated;
+    private boolean isEmpty = false;
 
     public Session(final LocalTime updated) {
         this.updated = updated;
     }
 
+    public static Session empty() {
+        final Session session = new Session(LocalTime.now());
+
+        session.isEmpty = true;
+
+        return session;
+    }
+
     public static Session notFound(final String sessionId) {
-        return Session.error("Session with id " + sessionId + " not found");
+        return Session.error("Session with id \"" + sessionId + "\" not found");
     }
 
-    public boolean isPending() {
-        return this.players.size() < PLAYERS_PER_SESSION;
-    }
-
-    public void addPlayer(final Player player) {
-        this.players.add(player);
+    public static Session invalidPlayerId(final String playerId) {
+        return Session.error("Invalid player id \"" + playerId + "\" provided");
     }
 
     public String getId() {
         return id;
+    }
+
+    public boolean isPlayerPlaying(UUID playerId) {
+        return this.players.stream().anyMatch(player -> player.isPlayer(playerId));
+    }
+
+    public boolean isPresent() {
+        return !isEmpty;
+    }
+
+    public boolean isPending() {
+        return players.size() < PLAYERS_PER_SESSION;
+    }
+
+    public void addPlayer(final Player player) {
+        players.add(player);
     }
 
     public boolean has(final String id) {
@@ -59,7 +81,7 @@ public class Session {
     }
 
     public SessionDto toDto() {
-        final var playersDto = this.players
+        final var playersDto = players
                 .stream()
                 .map(Player::toDto)
                 .collect(Collectors.toList());

@@ -16,14 +16,14 @@ class SessionSpec extends Specification {
 
         then:
         session.toDto().hasError
-        session.toDto().errorMessage == "Session with id some-id not found"
+        session.toDto().errorMessage == "Session with id \"some-id\" not found"
     }
 
     def 'add player to session'() {
         given:
         def player = Mock(Player)
         def playerDto = Mock(PlayerDto)
-        def session = new Session()
+        def session = new Session(LocalTime.now())
 
         when:
         player.toDto() >> playerDto
@@ -36,7 +36,7 @@ class SessionSpec extends Specification {
     def 'terminate removes all player'() {
         given:
         def player = Mock(Player)
-        def session = new Session()
+        def session = new Session(LocalTime.now())
 
         when:
         session.addPlayer(player)
@@ -48,7 +48,7 @@ class SessionSpec extends Specification {
 
     def 'has'() {
         given:
-        def session = new Session()
+        def session = new Session(LocalTime.now())
 
         when:
         def id = session.getId()
@@ -60,7 +60,7 @@ class SessionSpec extends Specification {
 
     def 'has not'() {
         given:
-        def session = new Session()
+        def session = new Session(LocalTime.now())
 
         when:
         def has = session.has("some-id")
