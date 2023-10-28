@@ -1,10 +1,9 @@
 package com.go.server.game.session.model
 
-
 import com.go.server.game.session.model.output.PlayerDto
 import spock.lang.Specification
 
-import java.time.LocalTime
+import java.time.Instant
 
 class SessionSpec extends Specification {
     def 'notFound creates a session with error'() {
@@ -23,7 +22,7 @@ class SessionSpec extends Specification {
         given:
         def player = Mock(Player)
         def playerDto = Mock(PlayerDto)
-        def session = new Session(LocalTime.now())
+        def session = new Session(Instant.now())
 
         when:
         player.toDto() >> playerDto
@@ -36,7 +35,7 @@ class SessionSpec extends Specification {
     def 'terminate removes all player'() {
         given:
         def player = Mock(Player)
-        def session = new Session(LocalTime.now())
+        def session = new Session(Instant.now())
 
         when:
         session.addPlayer(player)
@@ -48,7 +47,7 @@ class SessionSpec extends Specification {
 
     def 'has'() {
         given:
-        def session = new Session(LocalTime.now())
+        def session = new Session(Instant.now())
 
         when:
         def id = session.getId()
@@ -60,7 +59,7 @@ class SessionSpec extends Specification {
 
     def 'has not'() {
         given:
-        def session = new Session(LocalTime.now())
+        def session = new Session(Instant.now())
 
         when:
         def has = session.has("some-id")
@@ -71,7 +70,7 @@ class SessionSpec extends Specification {
 
     def 'is in use'() {
         given:
-        def session = new Session(LocalTime.now().minusSeconds(119))
+        def session = new Session(Instant.now().minusSeconds(119))
 
         when:
         def isInUse = session.isInUse()
@@ -82,7 +81,7 @@ class SessionSpec extends Specification {
 
     def 'is unused'() {
         given:
-        def session = new Session(LocalTime.now().minusSeconds(120))
+        def session = new Session(Instant.now().minusSeconds(120))
 
         when:
         def isInUse = session.isInUse()

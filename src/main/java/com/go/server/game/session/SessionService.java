@@ -10,13 +10,14 @@ import com.go.server.game.session.model.Player;
 import com.go.server.game.session.model.Session;
 import com.go.server.game.session.model.input.CreateSessionDto;
 import com.go.server.game.session.model.output.SessionDto;
+import com.go.server.game.session.repository.SessionRepository;
 import com.go.server.user.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -82,7 +83,7 @@ public class SessionService {
     }
 
     private Session createNewSession(final UUID playerId) {
-        final var session = new Session(LocalTime.now());
+        final var session = new Session(Instant.now());
 
         session.addPlayer(new Player(playerId, Colors.BLACK));
         repository.addSession(session);
@@ -101,6 +102,7 @@ public class SessionService {
     private Session addPlayer(final Player player, final String sessionId) {
         final var session = repository.getSession(sessionId);
 
+        // TODO: Check if session is not empty
         session.addPlayer(player);
 
         return repository.updateSession(session);

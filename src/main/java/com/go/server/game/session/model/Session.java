@@ -3,7 +3,7 @@ package com.go.server.game.session.model;
 import com.go.server.game.session.model.output.SessionDto;
 
 import java.time.Duration;
-import java.time.LocalTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -14,19 +14,26 @@ public class Session {
     private final static int PLAYERS_PER_SESSION = 2;
     private final static int MINUTES_UNTIL_UNUSED = 2;
     // TODO: Use UUID instead of string
-    private final String id = UUID.randomUUID().toString();
+    private final String id;
     private final List<Player> players = new CopyOnWriteArrayList<>();
     private boolean hasError = false;
     private String errorMessage = "";
-    private LocalTime updated;
+    private Instant updated;
     private boolean isEmpty = false;
 
-    public Session(final LocalTime updated) {
+    public Session(final Instant updated) {
         this.updated = updated;
+        this.id = UUID.randomUUID().toString();
+    }
+
+    public Session(final String id, final Instant updated, final List<Player> players) {
+        this.id = id;
+        this.updated = updated;
+        this.players.addAll(players);
     }
 
     public static Session empty() {
-        final Session session = new Session(LocalTime.now());
+        final Session session = new Session(Instant.now());
 
         session.isEmpty = true;
 
@@ -45,8 +52,12 @@ public class Session {
         return id;
     }
 
-    public boolean isPlayerPlaying(UUID playerId) {
-        return this.players.stream().anyMatch(player -> player.isPlayer(playerId));
+    public List<Player> getPlayers() {
+        return players;
+    }
+
+    public Instant getUpdated() {
+        return updated;
     }
 
     public boolean isPresent() {
@@ -71,11 +82,11 @@ public class Session {
     }
 
     public void update() {
-        updated = LocalTime.now();
+        updated = Instant.now();
     }
 
     public boolean isInUse() {
-        final var duration = Duration.between(updated, LocalTime.now());
+        final var duration = Duration.between(updated, Instant.now());
 
         return duration.getSeconds() < TimeUnit.MINUTES.toSeconds(MINUTES_UNTIL_UNUSED);
     }
@@ -90,7 +101,7 @@ public class Session {
     }
 
     private static Session error(final String errorMessage) {
-        final var session = new Session(LocalTime.now());
+        final var session = new Session(Instant.now());
 
         session.hasError = true;
         session.errorMessage = errorMessage;

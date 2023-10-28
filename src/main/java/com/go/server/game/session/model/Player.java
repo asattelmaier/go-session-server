@@ -13,8 +13,12 @@ public class Player {
         this.color = color;
     }
 
-    public boolean isPlayer(final UUID id) {
-        return id.equals(this.id);
+    public UUID getId() {
+        return id;
+    }
+
+    public Colors getColor() {
+        return color;
     }
 
     public PlayerDto toDto() {

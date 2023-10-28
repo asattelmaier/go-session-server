@@ -9,6 +9,7 @@ import com.go.server.game.message.messages.UpdatedMessage
 import com.go.server.game.session.model.Session
 import com.go.server.game.session.model.input.CreateSessionDto
 import com.go.server.game.session.model.output.SessionDto
+import com.go.server.game.session.repository.SessionRepository
 import spock.lang.Specification
 
 class SessionServiceSpec extends Specification {
