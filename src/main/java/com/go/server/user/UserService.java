@@ -4,6 +4,7 @@ import com.go.server.user.exeption.InvalidUserIdException;
 import com.go.server.user.exeption.UserNotFoundException;
 import com.go.server.user.model.Guest;
 import com.go.server.user.model.output.UserDto;
+import com.go.server.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;

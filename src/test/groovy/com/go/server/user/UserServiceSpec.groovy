@@ -4,6 +4,7 @@ import com.go.server.user.exeption.InvalidUserIdException
 import com.go.server.user.exeption.UserNotFoundException
 import com.go.server.user.model.User
 import com.go.server.user.model.output.UserDto
+import com.go.server.user.repository.UserRepository
 import spock.lang.Specification
 
 class UserServiceSpec extends Specification {

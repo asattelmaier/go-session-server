@@ -15,9 +15,9 @@ import java.util.concurrent.ExecutionException;
 
 @Repository
 public class SessionRepository {
-    private static char DOCUMENT_NAMESPACE_SEPARATOR = '/';
+    private final static char DOCUMENT_NAMESPACE_SEPARATOR = '/';
     private final Logger logger = LoggerFactory.getLogger(SessionRepository.class);
-    final private Firestore firestore;
+    private final Firestore firestore;
 
     public SessionRepository(@NonNull final Firestore firestore) {
         this.firestore = firestore;
