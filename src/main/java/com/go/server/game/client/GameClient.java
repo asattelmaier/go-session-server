@@ -3,6 +3,7 @@ package com.go.server.game.client;
 import com.go.server.configuration.SessionConfig;
 import com.go.server.game.client.exception.GameClientConnectionException;
 import com.go.server.game.client.exception.GameClientMessageException;
+import jakarta.websocket.ContainerProvider;
 import org.springframework.lang.NonNull;
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.WebSocketHttpHeaders;
@@ -10,7 +11,6 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.WebSocketClient;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 
-import javax.websocket.ContainerProvider;
 import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
@@ -70,7 +70,7 @@ public class GameClient {
     private static @NonNull
     WebSocketSession connect(final WebSocketClient client, final GameClientHandler handler, final URI uri) {
         try {
-            return client.doHandshake(handler, new WebSocketHttpHeaders(), uri).get();
+            return client.execute(handler, new WebSocketHttpHeaders(), uri).get();
         } catch (final InterruptedException | ExecutionException e) {
             throw new GameClientConnectionException("Error during connection Handshake with Game Client: " + e.getMessage(), e);
         }
