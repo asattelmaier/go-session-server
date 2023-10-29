@@ -9,7 +9,7 @@ export class TerraformStateStorage extends GoogleStack {
   constructor(scope: Construct) {
     super(scope, TerraformStateStorage.ID);
 
-    new StorageBucket(this, 'terraform-state-storage', {
+    new StorageBucket(this, TerraformStateStorage.ID, {
       name: GoogleBackendStack.TERRAFORM_STATE_STORAGE_NAME,
       forceDestroy: false,
       location: GoogleStack.DEFAULT_LOCATION,

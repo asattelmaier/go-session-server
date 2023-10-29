@@ -44,7 +44,7 @@ Create Go Session Server Image:
 # Docker Hub
 docker image build -t asattelmaier/go-session-server:latest -f docker/go-session-server/Dockerfile .
 # Google Cloud
-docker image build -t europe-west1-docker.pkg.dev/PROJECT_ID/go-services/go-session-server:latest -f docker/Dockerfile .
+docker image build -t europe-west1-docker.pkg.dev/PROJECT_ID/go-services/go-session-server:latest -f docker/go-session-server/Dockerfile .
 ```
 
 Push Go Session Server Image:

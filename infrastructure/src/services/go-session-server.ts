@@ -4,9 +4,21 @@ import { GoogleBackendStack } from '../google-stack/google-backend-stack';
 import { Fn, TerraformVariable } from 'cdktf';
 import { DataGoogleCloudRunService } from '@cdktf/provider-google/lib/data-google-cloud-run-service';
 import { CloudRunServiceIamBinding } from '@cdktf/provider-google/lib/cloud-run-service-iam-binding';
+import { FirestoreDatabase } from '@cdktf/provider-google/lib/firestore-database';
 
 export class GoSessionServer extends GoogleBackendStack {
   private static readonly ID = 'go-session-server';
+  // TODO: the database id is configurable since
+  //  `spring-cloud-gcp-starter-firestore` version `3.7.3`:
+  //  https://github.com/GoogleCloudPlatform/spring-cloud-gcp/pull/2164
+  //  Unfortunately, it is not possible to update to this version,
+  //  otherwise the Firestore emulator will no longer work as expected:
+  //  https://github.com/GoogleCloudPlatform/spring-cloud-gcp/issues/2286
+  private static readonly DATABASE_ID = '(default)';
+  private static readonly FIRESTORE_TYPE = 'FIRESTORE_NATIVE';
+  private static readonly FIRESTORE_DEFAULT_HOST_PORT = 'firestore.googleapis.com:443';
+  // The location is different from the default location because Firestore is not available there
+  private static readonly FIRESTORE_LOCATION = 'europe-west3';
   private static readonly CONTAINER_PORT = 8080;
   private static readonly CONTAINER_CONCURRENCY = 80;
   private static readonly MAX_INSTANCES = '1';
@@ -19,7 +31,14 @@ export class GoSessionServer extends GoogleBackendStack {
   constructor(scope: Construct) {
     super(scope, GoSessionServer.ID);
 
+    const database = new FirestoreDatabase(this, `${GoSessionServer.ID}-database`, {
+      name: GoSessionServer.DATABASE_ID,
+      type: GoSessionServer.FIRESTORE_TYPE,
+      locationId: GoSessionServer.FIRESTORE_LOCATION,
+    });
+
     const goSessionServer = new CloudRunService(this, GoSessionServer.ID, {
+      dependsOn: [database],
       location: GoSessionServer.DEFAULT_LOCATION,
       name: GoSessionServer.ID,
       template: {
@@ -37,6 +56,7 @@ export class GoSessionServer extends GoogleBackendStack {
     });
 
     new CloudRunServiceIamBinding(this, 'allow-public-access', {
+      dependsOn: [goSessionServer],
       location: GoSessionServer.DEFAULT_LOCATION,
       service: goSessionServer.name,
       role: 'roles/run.invoker',
@@ -62,6 +82,9 @@ export class GoSessionServer extends GoogleBackendStack {
         { name: 'GAME_CLIENT_SOCKET_HOST', value: host },
         // TODO: Investigate why https port not works as expected
         { name: 'GAME_CLIENT_SOCKET_PORT', value: '80' },
+        { name: 'FIRESTORE_EMULATOR_ENABLED', value: 'false' },
+        { name: 'FIRESTORE_EMULATOR_HOST_PORT', value: GoSessionServer.FIRESTORE_DEFAULT_HOST_PORT },
+        { name: 'FIRESTORE_EMULATOR_PROJECT_ID', value: this.project.stringValue },
       ]
     };
   }
