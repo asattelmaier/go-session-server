@@ -8,7 +8,7 @@ on:
 
 env:
   IMAGE_NAME: go-session-server
-  DOCKER_FILE_PATH: docker/Dockerfile
+  DOCKER_FILE_PATH: docker/go-session-server/Dockerfile
   INFRASTRUCTURE_BUILD_ARTEFACT_NAME: infrastructure-build-artifact
   INFRASTRUCTURE_BUILD_ARTEFACT_PATH: infrastructure/cdktf.out
   APPLICATION_BUILD_ARTIFACT_NAME: go-session-server-build-artifact
