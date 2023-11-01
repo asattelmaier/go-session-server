@@ -27,6 +27,26 @@ export class GoSessionServer extends GoogleBackendStack {
     type: 'string',
     description: 'Current Git Hash'
   });
+  private readonly guestPassword: TerraformVariable = new TerraformVariable(this, 'guest-password', {
+    sensitive: true,
+    type: 'string',
+    description: 'Guest user password'
+  });
+  private readonly jwtAccessTokenExpiration: TerraformVariable = new TerraformVariable(this, 'jwt-access-token-expiration', {
+    sensitive: true,
+    type: 'string',
+    description: 'JWT access token expiration in milliseconds'
+  });
+  private readonly jwtRefreshTokenExpiration: TerraformVariable = new TerraformVariable(this, 'jwt-refresh-token-expiration', {
+    sensitive: true,
+    type: 'string',
+    description: 'JWT refresh token expiration in milliseconds'
+  });
+  private readonly jwtSecretKey: TerraformVariable = new TerraformVariable(this, 'jwt-secret-key', {
+    sensitive: true,
+    type: 'string',
+    description: 'JWT secret key'
+  });
 
   constructor(scope: Construct) {
     super(scope, GoSessionServer.ID);
@@ -85,6 +105,10 @@ export class GoSessionServer extends GoogleBackendStack {
         { name: 'FIRESTORE_EMULATOR_ENABLED', value: 'false' },
         { name: 'FIRESTORE_EMULATOR_HOST_PORT', value: GoSessionServer.FIRESTORE_DEFAULT_HOST_PORT },
         { name: 'FIRESTORE_EMULATOR_PROJECT_ID', value: this.project.stringValue },
+        { name: 'SECURITY_GUEST_PASSWORD', value: this.guestPassword.stringValue },
+        { name: 'SECURITY_JWT_ACCESS_TOKEN_EXPIRATION', value: this.jwtAccessTokenExpiration.stringValue },
+        { name: 'SECURITY_JWT_REFRESH_TOKEN_EXPIRATION', value: this.jwtRefreshTokenExpiration.stringValue },
+        { name: 'SECURITY_JWT_SECRET_KEY', value: this.jwtSecretKey.stringValue },
       ]
     };
   }
