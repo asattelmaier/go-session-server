@@ -37,6 +37,21 @@ public class UserRepository {
         }
     }
 
+    public void updateUser(final User user) {
+        if (getUser(user.getId()).isEmpty()) return;
+
+        final var document = UserDocument.fromUser(user);
+
+        try {
+            firestore
+                    .document(UserDocument.COLLECTION_NAME + DOCUMENT_NAMESPACE_SEPARATOR + document.id)
+                    .set(document)
+                    .get();
+        } catch (ExecutionException | InterruptedException error) {
+            logger.error("Error during user creation: " + error.getMessage());
+        }
+    }
+
     public Optional<User> getUser(final UUID userId) {
         try {
             final var document = firestore
@@ -51,6 +66,23 @@ public class UserRepository {
             }
 
             return Optional.empty();
+        } catch (ExecutionException | InterruptedException error) {
+            logger.error("Error during requesting user: " + error.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    public Optional<User> findByUsername(final String username) {
+        try {
+            return firestore
+                    .collection(UserDocument.COLLECTION_NAME)
+                    .whereEqualTo("username", username)
+                    .get()
+                    .get()
+                    .toObjects(UserDocument.class)
+                    .stream()
+                    .findFirst()
+                    .map(UserDocument::toUser);
         } catch (ExecutionException | InterruptedException error) {
             logger.error("Error during requesting user: " + error.getMessage());
             return Optional.empty();

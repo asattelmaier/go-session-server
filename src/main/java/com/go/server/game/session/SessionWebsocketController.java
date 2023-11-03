@@ -3,7 +3,7 @@ package com.go.server.game.session;
 import com.go.server.game.session.model.Session;
 import com.go.server.game.session.model.input.CreateSessionDto;
 import com.go.server.game.session.model.output.SessionDto;
-import com.go.server.user.exeption.InvalidUserIdException;
+import com.go.server.user.exception.InvalidUserIdException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;

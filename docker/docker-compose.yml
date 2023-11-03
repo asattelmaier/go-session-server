@@ -15,6 +15,10 @@ services:
       - FIRESTORE_EMULATOR_ENABLED=true
       - FIRESTORE_EMULATOR_HOST_PORT=firestore-emulator:9000
       - FIRESTORE_EMULATOR_PROJECT_ID=local-project
+      - SECURITY_GUEST_PASSWORD=guest-password
+      - SECURITY_JWT_ACCESS_TOKEN_EXPIRATION=86400000
+      - SECURITY_JWT_REFRESH_TOKEN_EXPIRATION=604800000
+      - SECURITY_JWT_SECRET_KEY=8Gr0MjVACbywAYACtN6o0wl4FKIG4s3F2iOGwMA1BQLKXh5ScLIuun0PgZnZ94vm
     links:
       - start-firestore-emulator:firestore-emulator
       - start-go-game-socket-server:go-game-socket-server
