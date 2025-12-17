@@ -6,12 +6,15 @@ The Session Server is responsible for establishing a game session between two cl
 between the two clients and the game logic in the [Go Haskell Socket Server](https://github.com/asattelmaier/go-haskell)
 .
 
+## Prerequisites
+* Java 21 (Eclipse Temurin recommended)
+
 ## Build
 
-To build the project, you can use the following Maven command:
+To build the project, use the Maven Wrapper:
 
 ```bash
-mvn -B package --file pom.xml
+./mvnw clean package
 ```
 
 ## Running Services with Docker Compose
@@ -22,7 +25,7 @@ Before running the service, you need to provide your Google Credentials (`./goog
 source directory.
 
 ```bash
-docker-compose -f ./docker/docker-compose.yml up -d start
+docker compose -f ./docker/docker-compose.yml up -d start
 ```
 
 Run Firebase Emulator:
@@ -31,7 +34,7 @@ Before running the service, ensure you've provided your Google Credentials (`./g
 project's source directory.
 
 ```bash
-docker-compose -f ./docker/docker-compose.yml up -d start-firestore-emulator
+docker compose -f ./docker/docker-compose.yml up -d start-firestore-emulator
 ```
 
 ## Docker

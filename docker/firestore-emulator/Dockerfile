@@ -1,12 +1,10 @@
-FROM ubuntu:22.04@sha256:6120be6a2b7ce665d0cbddc3ce6eae60fe94637c6a66985312d1f02f63cc0bcd
-
-
+FROM ubuntu:24.04
 
 #==============================
 # Install firebase
 #==============================
 RUN apt update
-RUN apt -y install sudo curl openjdk-11-jre
+RUN apt -y install sudo curl openjdk-21-jre
 RUN curl -sL https://firebase.tools | bash
 
 

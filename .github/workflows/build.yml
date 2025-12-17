@@ -22,10 +22,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '20.x'
 
@@ -38,7 +38,7 @@ jobs:
         working-directory: infrastructure
 
       - name: Archive build artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.INFRASTRUCTURE_BUILD_ARTEFACT_NAME }}
           path: ${{ env.INFRASTRUCTURE_BUILD_ARTEFACT_PATH }}
@@ -49,13 +49,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: '21'
-          distribution: 'adopt'
+          distribution: 'temurin'
 
       - name: Build with Maven
         run: mvn -B package --file pom.xml
@@ -64,7 +64,7 @@ jobs:
         run: mvn test
 
       - name: Archive build artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APPLICATION_BUILD_ARTIFACT_NAME }}
           path: ${{ env.APPLICATION_BUILD_ARTIFACT_PATH }}
@@ -76,22 +76,22 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: '21'
-          distribution: 'adopt'
+          distribution: 'temurin'
 
       - name: Download build artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.APPLICATION_BUILD_ARTIFACT_NAME }}
           path: ${{ env.APPLICATION_BUILD_ARTIFACT_PATH }}
 
       - name: Build go session server image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: false
@@ -99,7 +99,7 @@ jobs:
           tags: asattelmaier/go-session-server:latest
 
       - name: Build firestore emulator image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: false
@@ -110,7 +110,7 @@ jobs:
         run: echo " ${{ secrets.GCLOUD_SA_KEY }}" > google-credentials.json
 
       - name: Start go session server
-        run: docker-compose -f ./docker/docker-compose.yml up -d start
+        run: docker compose -f ./docker/docker-compose.yml up -d start
 
       - name: Run integration tests
         run: mvn integration-test
@@ -122,22 +122,22 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download build artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.APPLICATION_BUILD_ARTIFACT_NAME }}
           path: ${{ env.APPLICATION_BUILD_ARTIFACT_PATH }}
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
       - name: Build and Push to Docker Hub
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: true
@@ -153,36 +153,43 @@ jobs:
 
     env:
       LOCATION: europe-west1
+      REPOSITORY: go-services
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download build artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.APPLICATION_BUILD_ARTIFACT_NAME }}
           path: ${{ env.APPLICATION_BUILD_ARTIFACT_PATH }}
 
       - name: Login to Google Cloud
-        uses: google-github-actions/setup-gcloud@v0.3.0
+        uses: google-github-actions/auth@v2
         with:
-          service_account_key: ${{ secrets.GCLOUD_SA_KEY }}
-          project_id: ${{ vars.GCLOUD_PROJECT_ID }}
-          export_default_credentials: true
+          credentials_json: ${{ secrets.GCLOUD_SA_KEY }}
 
       - name: Configure Docker Client
         run: |-
           gcloud auth configure-docker ${{ env.LOCATION }}-docker.pkg.dev --quiet
 
-      - uses: docker/build-push-action@v4
+      - name: Create Artifact Registry Repository
+        run: |
+          gcloud artifacts repositories create ${{ env.REPOSITORY }} \
+            --repository-format=docker \
+            --location=${{ env.LOCATION }} \
+            --description="Docker repository" \
+            --project=${{ vars.GCLOUD_PROJECT_ID }} || true
+
+      - uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           file: ${{ env.DOCKER_FILE_PATH }}
           tags: |
-            ${{ env.LOCATION }}-docker.pkg.dev/${{ vars.GCLOUD_PROJECT_ID }}/go-services/${{ env.IMAGE_NAME }}:${{ github.sha }}
-            ${{ env.LOCATION }}-docker.pkg.dev/${{ vars.GCLOUD_PROJECT_ID }}/go-services/${{ env.IMAGE_NAME }}:latest
+            ${{ env.LOCATION }}-docker.pkg.dev/${{ vars.GCLOUD_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.LOCATION }}-docker.pkg.dev/${{ vars.GCLOUD_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest
 
   deployInfrastructure:
     runs-on: ubuntu-latest
@@ -190,25 +197,23 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download build artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.INFRASTRUCTURE_BUILD_ARTEFACT_NAME }}
           path: ${{ env.INFRASTRUCTURE_BUILD_ARTEFACT_PATH }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.6.2"
 
       - name: Login to Google Cloud
-        uses: google-github-actions/setup-gcloud@v0.3.0
+        uses: google-github-actions/auth@v2
         with:
-          service_account_key: ${{ secrets.GCLOUD_SA_KEY }}
-          project_id: ${{ vars.GCLOUD_PROJECT_ID }}
-          export_default_credentials: true
+          credentials_json: ${{ secrets.GCLOUD_SA_KEY }}
 
       - name: Deploy Container Registry
         env:
@@ -226,25 +231,23 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Download build artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.INFRASTRUCTURE_BUILD_ARTEFACT_NAME }}
           path: ${{ env.INFRASTRUCTURE_BUILD_ARTEFACT_PATH }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.6.2"
 
       - name: Login to Google Cloud
-        uses: google-github-actions/setup-gcloud@v0.3.0
+        uses: google-github-actions/auth@v2
         with:
-          service_account_key: ${{ secrets.GCLOUD_SA_KEY }}
-          project_id: ${{ vars.GCLOUD_PROJECT_ID }}
-          export_default_credentials: true
+          credentials_json: ${{ secrets.GCLOUD_SA_KEY }}
 
       - name: Deploy Application
         env:
