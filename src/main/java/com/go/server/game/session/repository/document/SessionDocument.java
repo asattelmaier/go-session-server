@@ -1,5 +1,6 @@
 package com.go.server.game.session.repository.document;
 
+import com.go.server.game.session.model.BotDifficulty;
 import com.go.server.game.session.model.Session;
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.annotation.DocumentId;
@@ -16,27 +17,30 @@ public class SessionDocument {
     public String id;
     public List<PlayerDocument> players;
     public List<String> playerIds;
+    public BotDifficulty difficulty;
     public Timestamp updated;
 
     public SessionDocument() {
     }
 
-    public SessionDocument(final String id, final List<PlayerDocument> players, final Instant updated) {
+    public SessionDocument(final String id, final List<PlayerDocument> players, final BotDifficulty difficulty, final Instant updated) {
         this.id = id;
         this.players = players;
         this.playerIds = players.stream().map(player -> player.id).toList();
+        this.difficulty = difficulty;
         this.updated = Timestamp.of(Date.from(updated));
     }
 
     public static SessionDocument fromSession(final Session session) {
         final var players = session.getPlayers().stream().map(PlayerDocument::fromPlayer).toList();
 
-        return new SessionDocument(session.getId(), players, session.getUpdated());
+        return new SessionDocument(session.getId(), players, session.getDifficulty(), session.getUpdated());
     }
 
     public static Session toSession(final SessionDocument document) {
         final var players = document.players.stream().map(PlayerDocument::toPlayer).toList();
-
-        return new Session(document.id, Instant.now(), players);
+        final var session = new Session(document.id, document.updated.toDate().toInstant(), players);
+        session.setDifficulty(document.difficulty);
+        return session;
     }
 }

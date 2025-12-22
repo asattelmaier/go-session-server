@@ -70,7 +70,7 @@ export class GoSessionServer extends GoogleBackendStack {
         },
         spec: {
           containerConcurrency: GoSessionServer.CONTAINER_CONCURRENCY,
-          containers: [this.getContainerTemplate()],
+          containers: this.getContainers(),
         },
       },
     });
@@ -84,7 +84,7 @@ export class GoSessionServer extends GoogleBackendStack {
     });
   }
 
-  private getContainerTemplate(): CloudRunServiceTemplateSpecContainers {
+  private getContainers(): CloudRunServiceTemplateSpecContainers[] {
     const image = `${this.getContainerRegistryRepositoryName()}${GoSessionServer.ID}:${this.gitHash.stringValue}`;
     const gameClientSocketHost = new DataGoogleCloudRunService(this, 'game-client-socket-host', {
       location: GoSessionServer.DEFAULT_LOCATION,
@@ -95,21 +95,29 @@ export class GoSessionServer extends GoogleBackendStack {
     //  - https://github.com/hashicorp/terraform/issues/23893
     const host = Fn.one(Fn.regex('^(?:https?://)?([^:/?]+)', Fn.tostring(gameClientSocketHost.status.get(0).url)));
 
-    return {
-      image,
-      ports: [{ containerPort: GoSessionServer.CONTAINER_PORT }],
-      env: [
-        { name: 'GAME_CLIENT_SOCKET_HOST', value: host },
-        // TODO: Investigate why https port not works as expected
-        { name: 'GAME_CLIENT_SOCKET_PORT', value: '80' },
-        { name: 'FIRESTORE_EMULATOR_ENABLED', value: 'false' },
-        { name: 'FIRESTORE_EMULATOR_HOST_PORT', value: GoSessionServer.FIRESTORE_DEFAULT_HOST_PORT },
-        { name: 'FIRESTORE_EMULATOR_PROJECT_ID', value: this.project.stringValue },
-        { name: 'SECURITY_GUEST_PASSWORD', value: this.guestPassword.stringValue },
-        { name: 'SECURITY_JWT_ACCESS_TOKEN_EXPIRATION', value: this.jwtAccessTokenExpiration.stringValue },
-        { name: 'SECURITY_JWT_REFRESH_TOKEN_EXPIRATION', value: this.jwtRefreshTokenExpiration.stringValue },
-        { name: 'SECURITY_JWT_SECRET_KEY', value: this.jwtSecretKey.stringValue },
-      ]
-    };
+    return [
+      {
+        image,
+        ports: [{ containerPort: GoSessionServer.CONTAINER_PORT }],
+        env: [
+          { name: 'GAME_CLIENT_SOCKET_HOST', value: host },
+          // TODO: Investigate why https port not works as expected
+          { name: 'GAME_CLIENT_SOCKET_PORT', value: '80' },
+          { name: 'GNUGO_HOST', value: 'localhost' },
+          { name: 'GNUGO_PORT', value: '8001' },
+          { name: 'FIRESTORE_EMULATOR_ENABLED', value: 'false' },
+          { name: 'FIRESTORE_EMULATOR_HOST_PORT', value: GoSessionServer.FIRESTORE_DEFAULT_HOST_PORT },
+          { name: 'FIRESTORE_EMULATOR_PROJECT_ID', value: this.project.stringValue },
+          { name: 'SECURITY_GUEST_PASSWORD', value: this.guestPassword.stringValue },
+          { name: 'SECURITY_JWT_ACCESS_TOKEN_EXPIRATION', value: this.jwtAccessTokenExpiration.stringValue },
+          { name: 'SECURITY_JWT_REFRESH_TOKEN_EXPIRATION', value: this.jwtRefreshTokenExpiration.stringValue },
+          { name: 'SECURITY_JWT_SECRET_KEY', value: this.jwtSecretKey.stringValue },
+
+        ]
+      },
+      {
+        image: `${this.getContainerRegistryRepositoryName()}gnugo:${this.gitHash.stringValue}`,
+      }
+    ];
   }
 }

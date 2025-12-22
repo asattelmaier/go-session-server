@@ -28,7 +28,10 @@ public class SessionWebsocketController {
     @SendToUser("/game/session/created")
     public SessionDto createSession(@Payload @NonNull final CreateSessionDto createSessionDto) {
         try {
-            logger.info("Create session");
+            logger.info("Create session request received: " + createSessionDto);
+            if (createSessionDto.getDifficulty() == null) {
+                logger.error("DIFFICULTY IS NULL in Controller! Check Client-Side DTO. Client sent: " + createSessionDto);
+            }
             final var sessionDto = sessionService.createSession(createSessionDto);
             logger.info("Session \"" + sessionDto.id + "\" created");
 
@@ -36,7 +39,7 @@ public class SessionWebsocketController {
         } catch (InvalidUserIdException error) {
             logger.error(error.getMessage());
 
-            return Session.invalidPlayerId(createSessionDto.playerId).toDto();
+            return Session.invalidPlayerId(createSessionDto.getPlayerId()).toDto();
         }
     }
 

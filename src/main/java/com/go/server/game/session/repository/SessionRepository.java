@@ -84,7 +84,7 @@ public class SessionRepository {
         }
     }
 
-    public Session getSession(final String sessionId) {
+    public Optional<Session> findSession(final String sessionId) {
         try {
             final var document = firestore
                     .collection(SessionDocument.COLLECTION_NAME)
@@ -93,15 +93,15 @@ public class SessionRepository {
                     .get()
                     .toObject(SessionDocument.class);
 
-            if (document != null) {
-                return SessionDocument.toSession(document);
-            }
-
-            return Session.notFound(sessionId);
+            return Optional.ofNullable(document).map(SessionDocument::toSession);
         } catch (ExecutionException | InterruptedException error) {
             logger.error("Error during requesting session: " + error.getMessage());
-            return Session.notFound(sessionId);
+            return Optional.empty();
         }
+    }
+
+    public Session getSession(final String sessionId) {
+        return findSession(sessionId).orElseGet(() -> Session.notFound(sessionId));
     }
 
     public Session updateSession(final Session session) {

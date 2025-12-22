@@ -5,10 +5,17 @@ import java.util.Objects;
 public class PlayerDto {
     public final String id;
     public final String color;
+    public final boolean isBot;
 
-    public PlayerDto(final String id, final String color) {
+    @com.fasterxml.jackson.annotation.JsonCreator
+    public PlayerDto(
+            @com.fasterxml.jackson.annotation.JsonProperty("id") final String id,
+            @com.fasterxml.jackson.annotation.JsonProperty("color") final String color,
+            @com.fasterxml.jackson.annotation.JsonProperty("isBot") final boolean isBot
+    ) {
         this.id = id;
         this.color = color;
+        this.isBot = isBot;
     }
 
     @Override

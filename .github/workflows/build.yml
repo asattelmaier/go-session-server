@@ -101,7 +101,7 @@ jobs:
       - name: Build firestore emulator image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: docker/firestore-emulator
           push: false
           file: docker/firestore-emulator/Dockerfile
           tags: asattelmaier/firestore-emulator:latest
@@ -190,6 +190,16 @@ jobs:
           tags: |
             ${{ env.LOCATION }}-docker.pkg.dev/${{ vars.GCLOUD_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ env.LOCATION }}-docker.pkg.dev/${{ vars.GCLOUD_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Build and Push GnuGo
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          file: docker/gnugo/Dockerfile
+          tags: |
+            ${{ env.LOCATION }}-docker.pkg.dev/${{ vars.GCLOUD_PROJECT_ID }}/${{ env.REPOSITORY }}/gnugo:${{ github.sha }}
+            ${{ env.LOCATION }}-docker.pkg.dev/${{ vars.GCLOUD_PROJECT_ID }}/${{ env.REPOSITORY }}/gnugo:latest
 
   deployInfrastructure:
     runs-on: ubuntu-latest

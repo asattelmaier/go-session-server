@@ -1,4 +1,3 @@
-version: '3.9'
 services:
   start:
     image: asattelmaier/go-session-server:latest
@@ -34,7 +33,7 @@ services:
     networks:
       - serve
   start-firestore-emulator:
-    image: asattelmaier/firestore-emulator:latest
+    build: ./firestore-emulator
     volumes:
       - type: bind
         source: ${PWD}/google-credentials.json
@@ -46,6 +45,12 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=/opt/firestore-emulator/credentials.json
       - PORT=9000
       - PROJECT_ID=local-project
+    networks:
+      - serve
+  gnugo:
+    build: ./gnugo
+    ports:
+      - "8001:8001"
     networks:
       - serve
 networks:

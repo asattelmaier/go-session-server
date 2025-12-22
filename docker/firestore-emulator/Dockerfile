@@ -12,8 +12,8 @@ RUN curl -sL https://firebase.tools | bash
 #==============================
 # Copy files
 #==============================
-COPY ./docker/firestore-emulator/start.sh /opt/firestore-emulator/start.sh
-COPY ./docker/firestore-emulator/firebase.json /opt/firestore-emulator/firebase.json
+COPY start.sh /opt/firestore-emulator/start.sh
+COPY firebase.json /opt/firestore-emulator/firebase.json
 
 
 

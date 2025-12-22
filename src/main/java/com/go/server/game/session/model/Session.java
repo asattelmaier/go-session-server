@@ -20,10 +20,25 @@ public class Session {
     private String errorMessage = "";
     private Instant updated;
     private boolean isEmpty = false;
+    private BotDifficulty difficulty;
 
     public Session(final Instant updated) {
         this.updated = updated;
         this.id = UUID.randomUUID().toString();
+    }
+    
+    public Session(final Instant updated, final BotDifficulty difficulty) {
+        this.updated = updated;
+        this.id = UUID.randomUUID().toString();
+        this.difficulty = difficulty;
+    }
+
+    public BotDifficulty getDifficulty() {
+        return difficulty;
+    }
+
+    public void setDifficulty(BotDifficulty difficulty) {
+        this.difficulty = difficulty;
     }
 
     public Session(final String id, final Instant updated, final List<Player> players) {
@@ -97,7 +112,7 @@ public class Session {
                 .map(Player::toDto)
                 .collect(Collectors.toList());
 
-        return new SessionDto(id, playersDto, hasError, errorMessage);
+        return new SessionDto(id, playersDto, difficulty != null ? difficulty.name() : null, hasError, errorMessage);
     }
 
     private static Session error(final String errorMessage) {

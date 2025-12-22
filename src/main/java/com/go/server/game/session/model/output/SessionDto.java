@@ -6,12 +6,21 @@ import java.util.Objects;
 public class SessionDto {
     public final String id;
     public final List<PlayerDto> players;
+    public final String difficulty;
     public final boolean hasError;
     public final String errorMessage;
 
-    public SessionDto(final String id, final List<PlayerDto> players, final boolean hasError, final String errorMessage) {
+    @com.fasterxml.jackson.annotation.JsonCreator
+    public SessionDto(
+            @com.fasterxml.jackson.annotation.JsonProperty("id") final String id,
+            @com.fasterxml.jackson.annotation.JsonProperty("players") final List<PlayerDto> players,
+            @com.fasterxml.jackson.annotation.JsonProperty("difficulty") final String difficulty,
+            @com.fasterxml.jackson.annotation.JsonProperty("hasError") final boolean hasError,
+            @com.fasterxml.jackson.annotation.JsonProperty("errorMessage") final String errorMessage
+    ) {
         this.id = id;
         this.players = players;
+        this.difficulty = difficulty;
         this.hasError = hasError;
         this.errorMessage = errorMessage;
     }
