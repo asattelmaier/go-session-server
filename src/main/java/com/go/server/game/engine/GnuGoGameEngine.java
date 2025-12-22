@@ -161,7 +161,7 @@ public class GnuGoGameEngine implements GameEngine {
         List<List<List<IntersectionDto>>> positions = Collections.singletonList(board);
         
         return new GameDto(
-                new SettingsDto(session.getBoardSize(), true), // Suicidallowed default true for GnuGo Chinese rules?
+                new SettingsDto(session.getBoardSize()),
                 nextColor.substring(0, 1).toUpperCase() + nextColor.substring(1).toLowerCase(), // Capitalized "Black"/"White"
                 nextColor.equalsIgnoreCase("black") ? "White" : "Black", // Passive
                 positions

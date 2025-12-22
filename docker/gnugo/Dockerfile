@@ -8,4 +8,4 @@ RUN apt-get update && \
 
 EXPOSE 8001
 
-CMD socat TCP-LISTEN:8001,fork EXEC:"/usr/games/gnugo --mode gtp --chinese-rules"
+CMD socat TCP-LISTEN:8001,fork EXEC:"/usr/games/gnugo --mode gtp --japanese-rules"
