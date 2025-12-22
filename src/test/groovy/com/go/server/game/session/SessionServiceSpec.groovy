@@ -1,15 +1,12 @@
 package com.go.server.game.session
-
-import com.go.server.game.bot.BotManager
-import com.go.server.game.bot.BotService
-import com.go.server.game.bot.GnuGoBotService
-import com.go.server.game.client.GameClient
-import com.go.server.game.client.GameClientPool
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.go.server.game.engine.GameEngine
 import com.go.server.game.message.handler.MessageHandler
 import com.go.server.game.message.messages.JoinedMessage
 import com.go.server.game.message.messages.SimpleMessage
 import com.go.server.game.message.messages.TerminatedMessage
-
+import com.go.server.game.model.DeviceMove
+import com.go.server.game.model.dto.GameDto
 import com.go.server.game.session.model.BotDifficulty
 import com.go.server.game.session.model.Session
 import com.go.server.game.session.model.input.CreateSessionDto
@@ -19,14 +16,15 @@ import spock.lang.Ignore
 import spock.lang.Specification
 
 class SessionServiceSpec extends Specification {
+    private ObjectMapper objectMapper = new ObjectMapper()
+
     def 'create a session'() {
         given:
         def repository = Mock(SessionRepository)
         def messageHandler = Mock(MessageHandler)
-        def gameClientPool = Mock(GameClientPool)
+        def gameEngine = Mock(GameEngine)
 
-        def botManager = Mock(BotManager)
-        def service = new SessionService(repository, messageHandler, gameClientPool, botManager)
+        def service = new SessionService(repository, messageHandler, gameEngine)
         def playerId = UUID.randomUUID()
         def createSessionDto = new CreateSessionDto()
 
@@ -45,13 +43,13 @@ class SessionServiceSpec extends Specification {
         given:
         def repository = Mock(SessionRepository)
         def messageHandler = Mock(MessageHandler)
-        def gameClientPool = Mock(GameClientPool)
-        def botManager = Mock(BotManager)
-        def service = new SessionService(repository, messageHandler, gameClientPool, botManager)
+        def gameEngine = Mock(GameEngine)
+        def service = new SessionService(repository, messageHandler, gameEngine)
         def playerId = UUID.randomUUID()
         def createSessionDto = new CreateSessionDto()
         createSessionDto.playerId = playerId
         createSessionDto.difficulty = BotDifficulty.HARD
+        createSessionDto.boardSize = 13
 
         when:
         repository.getSessionByPlayerId(playerId) >> Optional.empty()
@@ -64,41 +62,13 @@ class SessionServiceSpec extends Specification {
         dto.players.find { !it.isBot }.id == playerId.toString()
     }
 
-    @Ignore("Logic changed: New session is created even if one exists")
-    def 'no new session will be created if the user is already in a session'() {
-        given:
-        def repository = Mock(SessionRepository)
-        def messageHandler = Mock(MessageHandler)
-        def gameClientPool = Mock(GameClientPool)
-
-        def botManager = Mock(BotManager)
-        def service = new SessionService(repository, messageHandler, gameClientPool, botManager)
-        def playerId = UUID.randomUUID()
-        def createSessionDto = new CreateSessionDto()
-        def session = Mock(Session)
-        def mockDto = Mock(SessionDto)
-
-        when:
-        createSessionDto.playerId = playerId
-        session.getId() >> "some-id"
-        repository.getSession("some-id") >> session
-        repository.getSessionByPlayerId(playerId) >> Optional.of(session)
-        session.toDto() >> mockDto
-        def dto = service.createSession(createSessionDto)
-
-        then:
-        dto == mockDto
-    }
-
     def 'terminate a session'() {
         given:
         def repository = Mock(SessionRepository)
         def messageHandler = Mock(MessageHandler)
-        def gameClientPool = Mock(GameClientPool)
+        def gameEngine = Mock(GameEngine)
         def session = Mock(Session)
-
-        def botManager = Mock(BotManager)
-        def service = new SessionService(repository, messageHandler, gameClientPool, botManager)
+        def service = new SessionService(repository, messageHandler, gameEngine)
 
         when:
         session.toDto() >> Mock(SessionDto)
@@ -115,35 +85,40 @@ class SessionServiceSpec extends Specification {
         given:
         def repository = Mock(SessionRepository)
         def messageHandler = Mock(MessageHandler)
-        def gameClientPool = Mock(GameClientPool)
-        def gameClient = Mock(GameClient)
+        def gameEngine = Mock(GameEngine)
         def session = Mock(Session)
+        def service = new SessionService(repository, messageHandler, gameEngine)
+        
+        def move = DeviceMove.at(3, 3)
 
-        def botManager = Mock(BotManager)
-        def service = new SessionService(repository, messageHandler, gameClientPool, botManager)
+        def gameDto = Mock(GameDto)
+        gameDto.activePlayer >> "White"
 
         when:
         repository.findSession("some-id") >> Optional.of(session)
         repository.getSession("some-id") >> session
-        gameClientPool.acquire() >> gameClient
-        service.updateSession("some-id", new byte[0])
+        session.getId() >> "some-id"
+        // Bot check shouldn't trigger if invalid players
+        session.getPlayers() >> [] 
+        
+        service.updateSession("some-id", move)
 
         then:
+        1 * gameEngine.processMove(session, _ as DeviceMove) >> gameDto
         1 * session.update()
+        // Broadcasts game state
         1 * messageHandler.send(_ as SimpleMessage)
-        1 * gameClientPool.release(gameClient)
+        // No bot logic triggered? activePlayer is "White", but no players mocked in session.
     }
 
     def 'join a session'() {
         given:
         def repository = Mock(SessionRepository)
         def messageHandler = Mock(MessageHandler)
-        def gameClientPool = Mock(GameClientPool)
+        def gameEngine = Mock(GameEngine)
         def session = Mock(Session)
         def playerId = UUID.randomUUID()
-
-        def botManager = Mock(BotManager)
-        def service = new SessionService(repository, messageHandler, gameClientPool, botManager)
+        def service = new SessionService(repository, messageHandler, gameEngine)
 
         when:
         session.toDto() >> Mock(SessionDto)
@@ -155,26 +130,5 @@ class SessionServiceSpec extends Specification {
         then:
         1 * session.addPlayer({ it.toDto().id == playerId.toString() })
         1 * messageHandler.send(_ as JoinedMessage)
-    }
-
-    def 'returns all pending sessions'() {
-        given:
-        def repository = Mock(SessionRepository)
-        def messageHandler = Mock(MessageHandler)
-        def gameClientPool = Mock(GameClientPool)
-
-        def botManager = Mock(BotManager)
-        def service = new SessionService(repository, messageHandler, gameClientPool, botManager)
-        def firstSession = Mock(Session)
-        def secondSession = Mock(Session)
-
-        when:
-        firstSession.isPending() >> true
-        firstSession.isPending() >> false
-        repository.getAllSessions() >> [firstSession, secondSession]
-        def sessions = service.getPendingSessions()
-
-        then:
-        sessions.size() == 1
     }
 }

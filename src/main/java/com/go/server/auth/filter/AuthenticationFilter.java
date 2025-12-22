@@ -7,6 +7,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -20,6 +22,7 @@ import java.util.Optional;
 
 @Component
 public class AuthenticationFilter extends OncePerRequestFilter {
+    private final static Logger logger = LoggerFactory.getLogger(AuthenticationFilter.class);
     private final static String AUTHORIZATION_HEADER_TOKEN_PREFIX = "Bearer ";
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
@@ -36,19 +39,36 @@ public class AuthenticationFilter extends OncePerRequestFilter {
             final @NotNull FilterChain filterChain
     ) throws ServletException, IOException {
         final var accessToken = extractAccessTokenFromHeader(request);
-        final var userDetails = accessToken.flatMap(jwtService::extractUsername).map(userDetailsService::loadUserByUsername);
-        final var isSameToken = userDetails.map(details -> details.getToken().equals(accessToken.get()));
-        final var isTokenValid = userDetails.map(details -> jwtService.isTokenValid(accessToken.get(), details.getUsername()));
-        final var authToken = userDetails.map(details -> new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities()));
 
-        if (isSameToken.isEmpty() || !isSameToken.get() || isTokenValid.isEmpty() || !isTokenValid.get() || isAlreadyAuthenticated()) {
-            filterChain.doFilter(request, response);
-            return;
+        if (accessToken.isPresent() && !isAlreadyAuthenticated()) {
+            processTokenAuthentication(accessToken.get(), request);
         }
 
-        authToken.get().setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-        SecurityContextHolder.getContext().setAuthentication(authToken.get());
         filterChain.doFilter(request, response);
+    }
+
+    private void processTokenAuthentication(final String token, final HttpServletRequest request) {
+        try {
+            final Optional<String> username = jwtService.extractUsername(token);
+
+            if (username.isEmpty()) {
+                return;
+            }
+
+            final var userDetails = userDetailsService.loadUserByUsername(username.get());
+
+            if (jwtService.isTokenValid(token, userDetails.getUsername()) && userDetails.getToken().equals(token)) {
+                final var authToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+                logger.debug("Successfully authenticated user: {}", username.get());
+            }
+
+        } catch (Exception e) {
+            logger.warn("Authentication failed: {}", e.getMessage());
+            // Don't throw, just don't set authentication.
+            // Spring Security will handle the unauthorized access.
+        }
     }
 
     private boolean isAlreadyAuthenticated() {

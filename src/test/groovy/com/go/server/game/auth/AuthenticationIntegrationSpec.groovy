@@ -1,26 +1,21 @@
 package com.go.server.game.auth
 
+import com.go.server.BaseIntegrationSpec
 import com.go.server.auth.model.input.RefreshTokenDto
 import com.go.server.auth.model.input.RegisterUserDto
-import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
-import org.apache.http.client.methods.CloseableHttpResponse
 import org.apache.http.client.methods.HttpGet
-import org.apache.http.client.methods.HttpPost
-import org.apache.http.client.methods.HttpRequestBase
-import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.HttpClients
 import org.apache.http.util.EntityUtils
-import spock.lang.Specification
 
-class AuthenticationIntegrationSpec extends Specification {
+class AuthenticationIntegrationSpec extends BaseIntegrationSpec {
+
     def "register a new user"() {
         given:
         def dto = new RegisterUserDto("test-${UUID.randomUUID()}", "test")
-        def url = "http://localhost:8080/auth/register"
 
         when:
-        def response = post(url, dto)
+        def response = post("/auth/register", dto)
 
         then:
         response.accessToken instanceof String
@@ -28,11 +23,8 @@ class AuthenticationIntegrationSpec extends Specification {
     }
 
     def "register a guest user"() {
-        given:
-        def url = "http://localhost:8080/auth/register/guest"
-
         when:
-        def response = post(url)
+        def response = post("/auth/register/guest", null)
 
         then:
         response.accessToken instanceof String
@@ -42,11 +34,10 @@ class AuthenticationIntegrationSpec extends Specification {
     def "authenticate a user"() {
         given:
         def dto = new RegisterUserDto("test-${UUID.randomUUID()}", "test")
-        def url = "http://localhost:8080/auth/authenticate"
 
         when:
-        registerUser(dto)
-        def response = post(url, dto)
+        registerUser(dto.username(), dto.password())
+        def response = post("/auth/authenticate", dto)
 
         then:
         response.accessToken instanceof String
@@ -56,13 +47,12 @@ class AuthenticationIntegrationSpec extends Specification {
     def "refresh a token"() {
         given:
         def dto = new RegisterUserDto("test-${UUID.randomUUID()}", "test")
-        def url = "http://localhost:8080/auth/refresh-token"
 
         when:
-        def tokens = registerUser(dto)
+        def tokens = registerUser(dto.username(), dto.password())
         def refreshTokenDto = new RefreshTokenDto(tokens.refreshToken)
         Thread.sleep(1000)
-        def response = post(url, refreshTokenDto)
+        def response = post("/auth/refresh-token", refreshTokenDto)
 
         then:
         response.accessToken instanceof String
@@ -74,11 +64,10 @@ class AuthenticationIntegrationSpec extends Specification {
     def "request user data"() {
         given:
         def dto = new RegisterUserDto("test-${UUID.randomUUID()}", "test")
-        def url = "http://localhost:8080/user"
 
         when:
-        def tokens = registerUser(dto)
-        def response = getJson(url, tokens.accessToken)
+        def tokens = registerUser(dto.username(), dto.password())
+        def response = getJson("/user", tokens.accessToken)
 
         then:
         response.username == dto.username()
@@ -87,82 +76,35 @@ class AuthenticationIntegrationSpec extends Specification {
     def "logout user"() {
         given:
         def dto = new RegisterUserDto("test-${UUID.randomUUID()}", "test")
-        def logoutUrl = "http://localhost:8080/auth/logout"
-        def userUrl = "http://localhost:8080/user"
 
         when:
-        def tokens = registerUser(dto)
-        post(logoutUrl, tokens.accessToken)
-        def response = get(userUrl, tokens.accessToken)
+        def tokens = registerUser(dto.username(), dto.password())
+        post("/auth/logout", tokens.accessToken) // Assuming post handles authorization header if passed differently logic needed
+        // wait, base post doesn't handle auth header easily.
+        // Let's use specific helper for this test or add it to Base
+        def postLogout = new org.apache.http.client.methods.HttpPost(BASE_URL + "/auth/logout")
+        postLogout.setHeader("Authorization", "Bearer " + tokens.accessToken)
+        HttpClients.createDefault().execute(postLogout)
+        
+        def response = get("/user", tokens.accessToken)
 
         then:
         response.getStatusLine().statusCode == 403
     }
-
-    def post(String url, Object object) {
-        def post = new HttpPost(url)
-
-        post.setEntity(new StringEntity(JsonOutput.toJson(object)))
-
-        return toJson(request(post))
+    
+    // Minimal helpers not in BaseIntegrationSpec yet
+    
+    def getJson(String path, String token) {
+        def response = get(path, token)
+        def content = EntityUtils.toString(response.getEntity())
+        return new JsonSlurper().parseText(content)
     }
 
-    def post(String url) {
-        def post = new HttpPost(url)
-
-        return toJson(request(post))
-    }
-
-    def post(String url, String token) {
-        def post = new HttpPost(url)
-
-        post.setHeader("Authorization", "Bearer $token")
-
-        return toJson(request(post))
-    }
-
-    def getJson(String url, String token) {
-        def get = new HttpGet(url)
-
+    def get(String path, String token) {
+        def fullUrl = path.startsWith("http") ? path : BASE_URL + path
+        def get = new HttpGet(fullUrl)
         get.setHeader("Authorization", "Bearer $token")
-
-        return toJson(request(get))
-    }
-
-    def get(String url, String token) {
-        def get = new HttpGet(url)
-
-        get.setHeader("Authorization", "Bearer $token")
-
-        return request(get)
-    }
-
-    def registerUser(Object object) {
-        def url = "http://localhost:8080/auth/register"
-        def post = new HttpPost(url)
-
-        post.setEntity(new StringEntity(JsonOutput.toJson(object)))
-
-        return toJson(request(post))
-    }
-
-    def request(HttpRequestBase http) {
-        def httpClient = HttpClients.createDefault()
-
-        http.setHeader("Content-Type", "application/json")
-
-        return httpClient.execute(http)
-    }
-
-    def toJson(CloseableHttpResponse response) {
-        def jsonSlurper = new JsonSlurper()
-        def payload = EntityUtils.toString(response.getEntity())
-
-        if (payload.length()) {
-            return jsonSlurper.parseText(payload)
-        }
-
-        return payload
+        return HttpClients.createDefault().execute(get)
     }
 }
 

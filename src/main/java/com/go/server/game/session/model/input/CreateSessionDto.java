@@ -11,12 +11,16 @@ public class CreateSessionDto {
     @JsonProperty("difficulty")
     private BotDifficulty difficulty;
 
+    @JsonProperty("boardSize")
+    private Integer boardSize;
+
     public CreateSessionDto() {
     }
     
-    public CreateSessionDto(String playerId, BotDifficulty difficulty) {
+    public CreateSessionDto(String playerId, BotDifficulty difficulty, Integer boardSize) {
         this.playerId = playerId;
         this.difficulty = difficulty;
+        this.boardSize = boardSize;
     }
 
     public String getPlayerId() {
@@ -35,8 +39,16 @@ public class CreateSessionDto {
         this.difficulty = difficulty;
     }
 
+    public Integer getBoardSize() {
+        return boardSize;
+    }
+
+    public void setBoardSize(Integer boardSize) {
+        this.boardSize = boardSize;
+    }
+
     @Override
     public String toString() {
-        return "CreateSessionDto{playerId='" + playerId + "', difficulty='" + difficulty + "'}";
+        return "CreateSessionDto{playerId='" + playerId + "', difficulty='" + difficulty + "', boardSize=" + boardSize + "}";
     }
 }

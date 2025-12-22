@@ -9,8 +9,7 @@ export class GoogleStack extends TerraformStack {
   //  the GoogleStack should not be responsible for
   //  the container registry
   private static readonly CONTAINER_REGISTRY_REPOSITORY_ID: string = 'go-services';
-  // TODO: Move the go game socket server name to a library
-  protected static readonly GO_GAME_SOCKET_SERVER_NAME: string = 'go-game-socket-server';
+
   protected readonly project: TerraformVariable = new TerraformVariable(this, 'google-project', {
     type: 'string',
     description: 'Google Cloud Console project'

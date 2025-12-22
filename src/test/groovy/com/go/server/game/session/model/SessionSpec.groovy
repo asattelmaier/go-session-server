@@ -18,6 +18,14 @@ class SessionSpec extends Specification {
         session.toDto().errorMessage == "Session with id \"some-id\" not found"
     }
 
+    def 'toDto includes default boardSize'() {
+        given:
+        def session = new Session(Instant.now())
+
+        expect:
+        session.toDto().boardSize == 19
+    }
+
     def 'add player to session'() {
         given:
         def player = Mock(Player)

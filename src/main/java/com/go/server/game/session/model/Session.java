@@ -5,6 +5,7 @@ import com.go.server.game.session.model.output.SessionDto;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
@@ -21,24 +22,45 @@ public class Session {
     private Instant updated;
     private boolean isEmpty = false;
     private BotDifficulty difficulty;
+    private int boardSize = 19;
+    private final List<String> moves = new CopyOnWriteArrayList<>();
 
     public Session(final Instant updated) {
         this.updated = updated;
         this.id = UUID.randomUUID().toString();
     }
     
-    public Session(final Instant updated, final BotDifficulty difficulty) {
+    public Session(final Instant updated, final BotDifficulty difficulty, final Integer boardSize) {
         this.updated = updated;
         this.id = UUID.randomUUID().toString();
         this.difficulty = difficulty;
+        if (boardSize != null) {
+            this.boardSize = boardSize;
+        }
     }
 
-    public BotDifficulty getDifficulty() {
-        return difficulty;
+    public Optional<BotDifficulty> getDifficulty() {
+        return Optional.ofNullable(difficulty);
     }
 
     public void setDifficulty(BotDifficulty difficulty) {
         this.difficulty = difficulty;
+    }
+
+    public int getBoardSize() {
+        return boardSize;
+    }
+
+    public void setBoardSize(int boardSize) {
+        this.boardSize = boardSize;
+    }
+    
+    public List<String> getMoves() {
+        return moves;
+    }
+    
+    public void addMove(String move) {
+        this.moves.add(move);
     }
 
     public Session(final String id, final Instant updated, final List<Player> players) {
@@ -112,7 +134,7 @@ public class Session {
                 .map(Player::toDto)
                 .collect(Collectors.toList());
 
-        return new SessionDto(id, playersDto, difficulty != null ? difficulty.name() : null, hasError, errorMessage);
+        return new SessionDto(id, playersDto, getDifficulty().map(Enum::name).orElse(null), boardSize, hasError, errorMessage);
     }
 
     private static Session error(final String errorMessage) {

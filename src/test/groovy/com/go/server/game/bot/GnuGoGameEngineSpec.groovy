@@ -1,14 +1,14 @@
-package com.go.server.game.bot
+package com.go.server.game.engine
 
 import com.go.server.game.session.model.BotDifficulty
 import spock.lang.Specification
 import spock.lang.Unroll
 
-class GnuGoBotServiceSpec extends Specification {
+class GnuGoGameEngineSpec extends Specification {
 
     def "toGtpCoord should correctly convert coordinates and skip 'I'"() {
         given:
-        def service = new GnuGoBotService()
+        def service = new GnuGoGameEngine()
 
         expect:
         service.toGtpCoord(x, y, 9) == expectedGtp
@@ -22,12 +22,19 @@ class GnuGoBotServiceSpec extends Specification {
         8 | 0 | "J9"
     }
 
-    def "parseGtpCoord should correctly convert GTP coordinates back"() {
+    def "parseGnuGoResponse should correctly convert GTP coordinates back"() {
+        // parseGnuGoResponse returns Optional<DeviceMove>. 
+        // We can't access private method parseGtpCoord directly if it's private.
+        // It's package-private in implementation.
+        // But logic is tested via parseGnuGoResponse indirectly? 
+        // Actually GnuGoGameEngine.parseGnuGoResponse calls DeviceMove.at(x,y).
+        
         given:
-        def service = new GnuGoBotService()
+        def service = new GnuGoGameEngine()
 
         expect:
-        def move = service.parseGtpCoord(gtpCoord, 9, 9)
+        def moveOpt = service.parseGnuGoResponse("= " + gtpCoord, 9) // Adding = prefix simulation
+        def move = moveOpt.get()
         move.x == expectedX
         move.y == expectedY
 
@@ -42,7 +49,7 @@ class GnuGoBotServiceSpec extends Specification {
 
     def "mapDifficultyToLevel should map enums to correct GnuGo levels"() {
         given:
-        def service = new GnuGoBotService()
+        def service = new GnuGoGameEngine()
 
         expect:
         service.mapDifficultyToLevel(difficulty) == expectedLevel
@@ -58,10 +65,10 @@ class GnuGoBotServiceSpec extends Specification {
     @Unroll
     def "parseGnuGoResponse should handle GTP success and special responses"() {
         given:
-        def service = new GnuGoBotService()
+        def service = new GnuGoGameEngine()
 
         when:
-        def result = service.parseGnuGoResponse(response, 9, 9)
+        def result = service.parseGnuGoResponse(response, 9)
 
         then:
         result.isPresent() == expectedPresent

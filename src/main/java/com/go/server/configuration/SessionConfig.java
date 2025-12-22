@@ -14,26 +14,19 @@ public class SessionConfig implements WebSocketMessageBrokerConfigurer {
     public final static String DESTINATION_PREFIX = "/game/session";
     private final static String ALLOWED_ORIGIN = "*";
     private final static String ENDPOINT = "/";
-    @Value("${game.client.socket.url}")
-    private String gameClientSocketUrl;
-
     @Override
     public void configureWebSocketTransport(final WebSocketTransportRegistration registry) {
-        registry.setMessageSizeLimit(SessionConfig.MESSAGE_BUFFER_SIZE);
-    }
-
-    @Override
-    public void registerStompEndpoints(final StompEndpointRegistry registry) {
-        registry.addEndpoint(SessionConfig.ENDPOINT).setAllowedOrigins(SessionConfig.ALLOWED_ORIGIN);
-    }
-
-    @Override
-    public void configureMessageBroker(final MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker(SessionConfig.DESTINATION_PREFIX);
-        registry.setApplicationDestinationPrefixes(SessionConfig.DESTINATION_PREFIX);
-    }
-
-    public URI getGameClientSocketUrl() {
-        return URI.create(gameClientSocketUrl);
-    }
+         registry.setMessageSizeLimit(SessionConfig.MESSAGE_BUFFER_SIZE);
+     }
+ 
+     @Override
+     public void registerStompEndpoints(final StompEndpointRegistry registry) {
+         registry.addEndpoint(SessionConfig.ENDPOINT).setAllowedOrigins(SessionConfig.ALLOWED_ORIGIN);
+     }
+ 
+     @Override
+     public void configureMessageBroker(final MessageBrokerRegistry registry) {
+         registry.enableSimpleBroker(SessionConfig.DESTINATION_PREFIX);
+         registry.setApplicationDestinationPrefixes(SessionConfig.DESTINATION_PREFIX);
+     }
 }

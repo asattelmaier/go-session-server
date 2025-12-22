@@ -1,8 +1,7 @@
 import { Construct } from 'constructs';
 import { CloudRunService, CloudRunServiceTemplateSpecContainers } from '@cdktf/provider-google/lib/cloud-run-service';
 import { GoogleBackendStack } from '../google-stack/google-backend-stack';
-import { Fn, TerraformVariable } from 'cdktf';
-import { DataGoogleCloudRunService } from '@cdktf/provider-google/lib/data-google-cloud-run-service';
+import { TerraformVariable } from 'cdktf';
 import { CloudRunServiceIamBinding } from '@cdktf/provider-google/lib/cloud-run-service-iam-binding';
 import { FirestoreDatabase } from '@cdktf/provider-google/lib/firestore-database';
 
@@ -86,23 +85,12 @@ export class GoSessionServer extends GoogleBackendStack {
 
   private getContainers(): CloudRunServiceTemplateSpecContainers[] {
     const image = `${this.getContainerRegistryRepositoryName()}${GoSessionServer.ID}:${this.gitHash.stringValue}`;
-    const gameClientSocketHost = new DataGoogleCloudRunService(this, 'game-client-socket-host', {
-      location: GoSessionServer.DEFAULT_LOCATION,
-      name: GoSessionServer.GO_GAME_SOCKET_SERVER_NAME,
-    });
-    // TODO: There is currently no simple way to get the host:
-    //  - https://github.com/hashicorp/terraform-provider-google/issues/9277
-    //  - https://github.com/hashicorp/terraform/issues/23893
-    const host = Fn.one(Fn.regex('^(?:https?://)?([^:/?]+)', Fn.tostring(gameClientSocketHost.status.get(0).url)));
 
     return [
       {
         image,
         ports: [{ containerPort: GoSessionServer.CONTAINER_PORT }],
         env: [
-          { name: 'GAME_CLIENT_SOCKET_HOST', value: host },
-          // TODO: Investigate why https port not works as expected
-          { name: 'GAME_CLIENT_SOCKET_PORT', value: '80' },
           { name: 'GNUGO_HOST', value: 'localhost' },
           { name: 'GNUGO_PORT', value: '8001' },
           { name: 'FIRESTORE_EMULATOR_ENABLED', value: 'false' },

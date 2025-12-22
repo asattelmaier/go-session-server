@@ -109,8 +109,8 @@ jobs:
       - name: Store Google credentials
         run: echo " ${{ secrets.GCLOUD_SA_KEY }}" > google-credentials.json
 
-      - name: Start go session server
-        run: docker compose -f ./docker/docker-compose.yml up -d start
+      - name: Start integration test dependencies
+        run: docker compose -f ./docker/docker-compose.yml up -d start-firestore-emulator gnugo
 
       - name: Run integration tests
         run: mvn integration-test

@@ -1,13 +1,14 @@
 package com.go.server.game.session;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.go.server.game.bot.BotManager;
-import com.go.server.game.bot.BotService;
-import com.go.server.game.client.GameClientPool;
+
+import com.go.server.game.engine.GameEngine;
 import com.go.server.game.message.handler.MessageHandler;
 import com.go.server.game.message.messages.JoinedMessage;
 import com.go.server.game.message.messages.SimpleMessage;
 import com.go.server.game.message.messages.TerminatedMessage;
+import com.go.server.game.model.DeviceMove;
+import com.go.server.game.model.dto.GameDto;
 import com.go.server.game.session.model.BotDifficulty;
 import com.go.server.game.session.model.Colors;
 import com.go.server.game.session.model.Player;
@@ -21,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -34,15 +36,14 @@ public class SessionService {
     
     private final SessionRepository repository;
     private final MessageHandler messageHandler;
-    private final GameClientPool gameClientPool;
-    private final BotManager botManager;
+    private final GameEngine gameEngine;
     private final Logger logger = LoggerFactory.getLogger(SessionService.class);
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public SessionService(final SessionRepository repository, final MessageHandler messageHandler, final GameClientPool gameClientPool, final BotManager botManager) {
+    public SessionService(final SessionRepository repository, final MessageHandler messageHandler, final GameEngine gameEngine) {
         this.repository = repository;
         this.messageHandler = messageHandler;
-        this.gameClientPool = gameClientPool;
-        this.botManager = botManager;
+        this.gameEngine = gameEngine;
     }
 
     public SessionDto createSession(final CreateSessionDto createSessionDto) {
@@ -53,7 +54,7 @@ public class SessionService {
             terminateSession(openSession.getId());
         });
 
-        return createNewSession(playerId, createSessionDto.getDifficulty()).toDto();
+        return createNewSession(playerId, createSessionDto.getDifficulty(), createSessionDto.getBoardSize()).toDto();
     }
 
     public void terminateSession(final String sessionId) {
@@ -63,11 +64,47 @@ public class SessionService {
         messageHandler.send(new TerminatedMessage(session.toDto()));
     }
 
-    public void updateSession(final String sessionId, final byte[] message) {
+    public void updateSession(final String sessionId, final DeviceMove move) {
         final var session = repository.getSession(sessionId);
-        sendMessage(sessionId, message);
+        processHumanMove(session, move);
         session.update();
         repository.updateSession(session);
+    }
+
+    public void initializeGame(final String sessionId) {
+        final var session = repository.getSession(sessionId);
+        GameDto gameDto = gameEngine.getGameState(session);
+        broadcastGameState(sessionId, gameDto);
+    }
+    
+    private void processHumanMove(Session session, DeviceMove move) {
+        GameDto gameDto = gameEngine.processMove(session, move);
+        broadcastGameState(session.getId(), gameDto);
+        
+        checkForBotMove(session, gameDto);
+    }
+
+    private void broadcastGameState(String sessionId, GameDto gameDto) {
+        messageHandler.send(new SimpleMessage(sessionId, TOPIC_UPDATED, gameDto));
+    }
+
+    private void checkForBotMove(Session session, GameDto gameDto) {
+        // activePlayer is "Black" or "White"
+        String activeColor = gameDto.activePlayer; 
+        
+        Optional<Player> botPlayer = session.getPlayers().stream()
+                .filter(p -> p.isBot() && p.getColor().name().equalsIgnoreCase(activeColor))
+                .findFirst();
+                
+        botPlayer.ifPresent(bot -> {
+            logger.debug("It is Bot's turn ({})", bot.getColor());
+            gameEngine.generateMove(session).ifPresent(move -> {
+                GameDto newGameDto = gameEngine.processMove(session, move);
+                broadcastGameState(session.getId(), newGameDto);
+                
+                checkForBotMove(session, newGameDto);
+            });
+        });
     }
 
     public SessionDto joinSession(final String playerId, final String sessionId) {
@@ -85,9 +122,9 @@ public class SessionService {
                 .toList();
     }
 
-    private Session createNewSession(final UUID playerId, final BotDifficulty difficulty) {
-        logger.info("Creating new session for player: {} with difficulty: {}", playerId, difficulty);
-        final var session = new Session(Instant.now(), difficulty);
+    private Session createNewSession(final UUID playerId, final BotDifficulty difficulty, final Integer boardSize) {
+        logger.info("Creating new session for player: {} with difficulty: {} size: {}", playerId, difficulty, boardSize);
+        final var session = new Session(Instant.now(), difficulty, boardSize);
         session.addPlayer(Player.human(playerId, Colors.BLACK));
 
         Optional.ofNullable(difficulty)
@@ -101,25 +138,6 @@ public class SessionService {
 
         repository.addSession(session);
         return session;
-    }
-
-    private void sendMessage(final String sessionId, final byte[] message) {
-        final var gameClient = gameClientPool.acquire();
-        try {
-            byte[] response = gameClient.send(message);
-            messageHandler.send(new SimpleMessage(sessionId, TOPIC_UPDATED, response));
-            checkForBotMove(sessionId, response);
-        } finally {
-            gameClientPool.release(gameClient);
-        }
-    }
-
-    private void checkForBotMove(String sessionId, byte[] gameState) {
-        repository.findSession(sessionId)
-                .ifPresentOrElse(
-                        session -> botManager.checkForBotMove(session, gameState, this::sendMessage),
-                        () -> logger.warn("Session not found during bot check: {}", sessionId)
-                );
     }
 
     private Session addPlayer(final Player player, final String sessionId) {

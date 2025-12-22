@@ -9,8 +9,6 @@ services:
       - "8080:8080"
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/credentials.json
-      - GAME_CLIENT_SOCKET_HOST=go-game-socket-server
-      - GAME_CLIENT_SOCKET_PORT=8000
       - FIRESTORE_EMULATOR_ENABLED=true
       - FIRESTORE_EMULATOR_HOST_PORT=firestore-emulator:9000
       - FIRESTORE_EMULATOR_PROJECT_ID=local-project
@@ -20,16 +18,8 @@ services:
       - SECURITY_JWT_SECRET_KEY=8Gr0MjVACbywAYACtN6o0wl4FKIG4s3F2iOGwMA1BQLKXh5ScLIuun0PgZnZ94vm
     links:
       - start-firestore-emulator:firestore-emulator
-      - start-go-game-socket-server:go-game-socket-server
     depends_on:
       - start-firestore-emulator
-      - start-go-game-socket-server
-    networks:
-      - serve
-  start-go-game-socket-server:
-    image: asattelmaier/go-game-socket-server:latest
-    ports:
-      - "8000:8000"
     networks:
       - serve
   start-firestore-emulator:

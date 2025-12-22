@@ -1,29 +1,38 @@
 package com.go.server.game.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class DeviceMove {
     public static final String PASS_ID = "PASS";
 
+    public enum MoveType {
+        PLAY,
+        PASS
+    }
+
     private int x;
     private int y;
-    private boolean isPass;
+    private MoveType type;
 
     /**
      * Default constructor for Jackson/Serialization.
      */
-    public DeviceMove() {}
+    public DeviceMove() {
+        this.type = MoveType.PLAY; // Default to PLAY
+    }
 
-    private DeviceMove(int x, int y, boolean isPass) {
+    private DeviceMove(int x, int y, MoveType type) {
         this.x = x;
         this.y = y;
-        this.isPass = isPass;
+        this.type = type;
     }
 
     public static DeviceMove at(int x, int y) {
-        return new DeviceMove(x, y, false);
+        return new DeviceMove(x, y, MoveType.PLAY);
     }
 
     public static DeviceMove pass() {
-        return new DeviceMove(0, 0, true);
+        return new DeviceMove(0, 0, MoveType.PASS);
     }
 
     public int getX() {
@@ -42,16 +51,27 @@ public class DeviceMove {
         this.y = y;
     }
 
-    public boolean isPass() {
-        return isPass;
+    public MoveType getType() {
+        return type;
     }
 
-    public void setPass(boolean pass) {
-        isPass = pass;
+    public void setType(MoveType type) {
+        this.type = type;
+    }
+    
+    public void setPass(boolean isPass) {
+        if (isPass) {
+            this.type = MoveType.PASS;
+        }
+    }
+
+    @JsonIgnore
+    public boolean isPass() {
+        return type == MoveType.PASS;
     }
 
     @Override
     public String toString() {
-        return isPass ? PASS_ID : "(" + x + "," + y + ")";
+        return type == MoveType.PASS ? PASS_ID : "(" + x + "," + y + ")";
     }
 }

@@ -7,6 +7,7 @@ public class SessionDto {
     public final String id;
     public final List<PlayerDto> players;
     public final String difficulty;
+    public final int boardSize;
     public final boolean hasError;
     public final String errorMessage;
 
@@ -15,12 +16,14 @@ public class SessionDto {
             @com.fasterxml.jackson.annotation.JsonProperty("id") final String id,
             @com.fasterxml.jackson.annotation.JsonProperty("players") final List<PlayerDto> players,
             @com.fasterxml.jackson.annotation.JsonProperty("difficulty") final String difficulty,
+            @com.fasterxml.jackson.annotation.JsonProperty("boardSize") final int boardSize,
             @com.fasterxml.jackson.annotation.JsonProperty("hasError") final boolean hasError,
             @com.fasterxml.jackson.annotation.JsonProperty("errorMessage") final String errorMessage
     ) {
         this.id = id;
         this.players = players;
         this.difficulty = difficulty;
+        this.boardSize = boardSize;
         this.hasError = hasError;
         this.errorMessage = errorMessage;
     }
