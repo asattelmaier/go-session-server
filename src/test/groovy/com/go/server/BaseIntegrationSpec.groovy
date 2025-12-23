@@ -81,10 +81,10 @@ abstract class BaseIntegrationSpec extends Specification {
     }
 
     protected StompSession connect(String token) {
-        def handshakeHeaders = new WebSocketHttpHeaders()
-        handshakeHeaders.add("Authorization", "Bearer $token")
+        def stompHeaders = new StompHeaders()
+        stompHeaders.add("Authorization", "Bearer $token")
         
-        return stompClient.connectAsync(getWsUrl(), handshakeHeaders, new StompHeaders(), new StompSessionHandlerAdapter() {
+        return stompClient.connectAsync(getWsUrl(), new WebSocketHttpHeaders(), stompHeaders, new StompSessionHandlerAdapter() {
             @Override
             void handleException(StompSession s, StompCommand c, StompHeaders h, byte[] p, Throwable e) {
                 e.printStackTrace()
