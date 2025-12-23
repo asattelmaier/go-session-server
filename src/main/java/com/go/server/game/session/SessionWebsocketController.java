@@ -61,10 +61,7 @@ public class SessionWebsocketController {
     public SessionDto createSession(@Payload @NonNull final CreateSessionDto createSessionDto) {
         try {
             logger.info("Create session request received: " + createSessionDto);
-            logger.info("Requested Board Size: " + createSessionDto.getBoardSize());
-            if (createSessionDto.getDifficulty() == null) {
-                logger.error("DIFFICULTY IS NULL in Controller! Check Client-Side DTO. Client sent: " + createSessionDto);
-            }
+
             final var sessionDto = sessionService.createSession(createSessionDto);
             logger.info("Session \"" + sessionDto.id + "\" created");
 
@@ -115,9 +112,10 @@ public class SessionWebsocketController {
 
     @MessageMapping("/{sessionId}/join")
     @SendToUser("/game/session/joined")
-    public SessionDto joinSession(@Header("simpSessionId") final String playerId, @NonNull @DestinationVariable final String sessionId) {
+    public SessionDto joinSession(java.security.Principal principal, @Header("simpSessionId") final String sessionIdHeader, @NonNull @DestinationVariable final String sessionId) {
         try {
-            logger.info("Player joins the session \"" + sessionId + "\"");
+            final String playerId = principal != null ? principal.getName() : sessionIdHeader;
+            logger.info("Player joins the session \"" + sessionId + "\" (Player ID: " + playerId + ")");
             final var sessionDto = this.sessionService.joinSession(playerId, sessionId);
             logger.info("Player joined the session \"" + sessionId + "\"");
 
@@ -125,7 +123,7 @@ public class SessionWebsocketController {
         } catch (InvalidUserIdException error) {
             logger.error(error.getMessage());
 
-            return Session.invalidPlayerId(playerId).toDto();
+            return Session.invalidPlayerId(principal != null ? principal.getName() : sessionIdHeader).toDto();
         }
     }
 }

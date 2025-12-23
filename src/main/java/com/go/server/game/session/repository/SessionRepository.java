@@ -101,16 +101,24 @@ public class SessionRepository {
     }
 
     public Session getSession(final String sessionId) {
-        return findSession(sessionId).orElseGet(() -> Session.notFound(sessionId));
+        return findSession(sessionId)
+                .orElseThrow(() -> new java.util.NoSuchElementException("Session with id " + sessionId + " not found"));
     }
 
     public Session updateSession(final Session session) {
         final var document = SessionDocument.fromSession(session);
 
-        firestore
-                .collection(SessionDocument.COLLECTION_NAME)
-                .document(document.id)
-                .set(document);
+        try {
+            firestore
+                    .collection(SessionDocument.COLLECTION_NAME)
+                    .document(document.id)
+                    .set(document)
+                    .get();
+        } catch (ExecutionException | InterruptedException error) {
+            logger.error("Error during updating session: " + error.getMessage());
+        }
+        
+
 
         return session;
     }

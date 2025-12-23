@@ -19,7 +19,7 @@ public class SessionDocument {
     public List<PlayerDocument> players;
     public List<String> playerIds;
     public BotDifficulty difficulty;
-    public Integer boardSize; // Use Integer to detect missing values
+    public Integer boardSize;
     public List<String> moves;
     public Timestamp updated;
 
@@ -47,7 +47,6 @@ public class SessionDocument {
         final var session = new Session(document.id, document.updated.toDate().toInstant(), players);
         session.setDifficulty(document.difficulty);
         
-        // Default to 19 if missing or 0
         int size = (document.boardSize == null || document.boardSize == 0) ? 19 : document.boardSize;
         session.setBoardSize(size);
         
@@ -60,4 +59,5 @@ public class SessionDocument {
                 
         return session;
     }
+
 }

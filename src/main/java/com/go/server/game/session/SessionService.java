@@ -146,7 +146,7 @@ public class SessionService {
         logger.info("Creating new session for player: {} with difficulty: {} size: {}", playerId, difficulty, boardSize);
         final var session = new Session(Instant.now(), difficulty, boardSize);
         session.addPlayer(Player.human(playerId, Colors.BLACK));
-
+        
         Optional.ofNullable(difficulty)
                 .ifPresentOrElse(
                         d -> {
@@ -162,6 +162,7 @@ public class SessionService {
 
     private Session addPlayer(final Player player, final String sessionId) {
         final var session = repository.getSession(sessionId);
+        logger.info("Adding player to session {}. Players before: {}", sessionId, session.getPlayers().size());
         session.addPlayer(player);
         return repository.updateSession(session);
     }
