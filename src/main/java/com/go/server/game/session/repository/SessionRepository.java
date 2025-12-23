@@ -34,7 +34,7 @@ public class SessionRepository {
                     .map(mapping -> SessionDocument.toSession(mapping.toObject(SessionDocument.class)))
                     .toList();
         } catch (ExecutionException | InterruptedException error) {
-            logger.error("Error during requesting all sessions: " + error.getMessage());
+            logger.error("Error during requesting all sessions: {}", error.getMessage());
             return List.of();
         }
     }
@@ -49,7 +49,7 @@ public class SessionRepository {
                     .create(document)
                     .get();
         } catch (ExecutionException | InterruptedException error) {
-            logger.error("Error during adding session: " + error.getMessage());
+            logger.error("Error during adding session: {}", error.getMessage());
         }
     }
 
@@ -61,7 +61,7 @@ public class SessionRepository {
                     .delete()
                     .get();
         } catch (ExecutionException | InterruptedException error) {
-            logger.error("Error during removing session: " + error.getMessage());
+            logger.error("Error during removing session: {}", error.getMessage());
         }
     }
 
@@ -80,7 +80,7 @@ public class SessionRepository {
                             .document(mapping.getId())
                             .delete());
         } catch (ExecutionException | InterruptedException error) {
-            logger.error("Error during removing sessions: " + error.getMessage());
+            logger.error("Error during removing sessions: {}", error.getMessage());
         }
     }
 
@@ -95,7 +95,7 @@ public class SessionRepository {
 
             return Optional.ofNullable(document).map(SessionDocument::toSession);
         } catch (ExecutionException | InterruptedException error) {
-            logger.error("Error during requesting session: " + error.getMessage());
+            logger.error("Error during requesting session: {}", error.getMessage());
             return Optional.empty();
         }
     }
@@ -115,7 +115,7 @@ public class SessionRepository {
                     .set(document)
                     .get();
         } catch (ExecutionException | InterruptedException error) {
-            logger.error("Error during updating session: " + error.getMessage());
+            logger.error("Error during updating session: {}", error.getMessage());
         }
         
 
@@ -135,7 +135,7 @@ public class SessionRepository {
                     .findFirst()
                     .map(SessionDocument::toSession);
         } catch (ExecutionException | InterruptedException error) {
-            logger.error("Error during requesting player session: " + error.getMessage());
+            logger.error("Error during requesting player session: {}", error.getMessage());
             return Optional.empty();
         }
     }

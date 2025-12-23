@@ -60,10 +60,10 @@ public class SessionWebsocketController {
     @SendToUser("/game/session/created")
     public SessionDto createSession(@Payload @NonNull final CreateSessionDto createSessionDto) {
         try {
-            logger.info("Create session request received: " + createSessionDto);
+            logger.info("Create session request received: {}", createSessionDto);
 
             final var sessionDto = sessionService.createSession(createSessionDto);
-            logger.info("Session \"" + sessionDto.id + "\" created");
+            logger.info("Session \"{}\" created", sessionDto.id);
 
             return sessionDto;
         } catch (InvalidUserIdException error) {
@@ -75,7 +75,7 @@ public class SessionWebsocketController {
 
     @MessageMapping("/{sessionId}/terminate")
     public void terminateSession(@NonNull @DestinationVariable final String sessionId) {
-        logger.info("Session \"" + sessionId + "\" terminated");
+        logger.info("Session \"{}\" terminated", sessionId);
         this.sessionService.terminateSession(sessionId);
     }
 
@@ -115,9 +115,9 @@ public class SessionWebsocketController {
     public SessionDto joinSession(java.security.Principal principal, @Header("simpSessionId") final String sessionIdHeader, @NonNull @DestinationVariable final String sessionId) {
         try {
             final String playerId = principal != null ? principal.getName() : sessionIdHeader;
-            logger.info("Player joins the session \"" + sessionId + "\" (Player ID: " + playerId + ")");
+            logger.info("Player joins the session \"{}\" (Player ID: {})", sessionId, playerId);
             final var sessionDto = this.sessionService.joinSession(playerId, sessionId);
-            logger.info("Player joined the session \"" + sessionId + "\"");
+            logger.info("Player joined the session \"{}\"", sessionId);
 
             return sessionDto;
         } catch (InvalidUserIdException error) {

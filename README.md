@@ -25,7 +25,7 @@ This project uses **Maven** and the **Spock Framework** for testing.
 # Build the application
 ./mvnw clean package
 
-# Run all tests (Unit + Integration)
+# Run all tests (Integration)
 ./scripts/test_local.sh
 ```
 

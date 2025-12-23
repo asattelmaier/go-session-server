@@ -16,7 +16,7 @@ public class MessageHandler {
     }
 
     public void send(final Message message) {
-        logger.info("Message send to " + message.getDestination() + ", with payload: " + message.getPayload());
+        logger.info("Message send to {}, with payload: {}", message.getDestination(), message.getPayload());
         this.messagingTemplate.convertAndSend(message.getDestination(), message.getPayload());
     }
 }

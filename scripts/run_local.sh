@@ -8,4 +8,4 @@ echo "Starting Docker dependencies..."
 (cd "$SCRIPT_DIR/../docker" && docker compose up -d --build start-firestore-emulator gnugo)
 
 echo "Starting Go Session Server locally..."
-(cd "$SCRIPT_DIR/.." && ./mvnw spring-boot:run)
+(cd "$SCRIPT_DIR/.." && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev)
