@@ -8,7 +8,8 @@ import com.go.server.game.message.messages.JoinedMessage;
 import com.go.server.game.message.messages.SimpleMessage;
 import com.go.server.game.message.messages.TerminatedMessage;
 import com.go.server.game.model.DeviceMove;
-import com.go.server.game.model.dto.GameDto;
+import com.go.server.game.model.*;
+import com.go.server.game.model.dto.*;
 import com.go.server.game.session.model.BotDifficulty;
 import com.go.server.game.session.model.Colors;
 import com.go.server.game.session.model.Player;
@@ -73,24 +74,38 @@ public class SessionService {
 
     public void initializeGame(final String sessionId) {
         final var session = repository.getSession(sessionId);
-        GameDto gameDto = gameEngine.getGameState(session);
-        broadcastGameState(sessionId, gameDto);
+        Game game = gameEngine.getGameState(session);
+        broadcastGameState(sessionId, game.toDto());
     }
     
     private void processHumanMove(Session session, DeviceMove move) {
-        GameDto gameDto = gameEngine.processMove(session, move);
+        Game game = gameEngine.processMove(session, move);
+        
+        GameDto gameDto = game.toDto();
         broadcastGameState(session.getId(), gameDto);
         
-        checkForBotMove(session, gameDto);
+        if (game.isGameEnded()) {
+            handleGameEnd(session);
+        } else {
+            checkForBotMove(session, game);
+        }
     }
 
     private void broadcastGameState(String sessionId, GameDto gameDto) {
         messageHandler.send(new SimpleMessage(sessionId, TOPIC_UPDATED, gameDto));
     }
+    
+    private void handleGameEnd(Session session) {
+        try {
+            EndGame endGame = gameEngine.getScore(session);
+            messageHandler.send(new com.go.server.game.message.messages.EndGameMessage(session.getId(), endGame.toDto()));
+        } catch (Exception e) {
+            logger.error("Failed to calculate score or send end game message", e);
+        }
+    }
 
-    private void checkForBotMove(Session session, GameDto gameDto) {
-        // activePlayer is "Black" or "White"
-        String activeColor = gameDto.activePlayer; 
+    private void checkForBotMove(Session session, Game game) {
+        String activeColor = game.getActivePlayer().getColor().name();
         
         Optional<Player> botPlayer = session.getPlayers().stream()
                 .filter(p -> p.isBot() && p.getColor().name().equalsIgnoreCase(activeColor))
@@ -99,10 +114,15 @@ public class SessionService {
         botPlayer.ifPresent(bot -> {
             logger.debug("It is Bot's turn ({})", bot.getColor());
             gameEngine.generateMove(session).ifPresent(move -> {
-                GameDto newGameDto = gameEngine.processMove(session, move);
+                Game newGame = gameEngine.processMove(session, move);
+                GameDto newGameDto = newGame.toDto();
                 broadcastGameState(session.getId(), newGameDto);
                 
-                checkForBotMove(session, newGameDto);
+                if (newGame.isGameEnded()) {
+                    handleGameEnd(session);
+                } else {
+                    checkForBotMove(session, newGame);
+                }
             });
         });
     }

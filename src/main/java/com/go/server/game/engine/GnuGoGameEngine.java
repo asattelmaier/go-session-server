@@ -1,9 +1,9 @@
 package com.go.server.game.engine;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.go.server.game.model.DeviceMove;
-import com.go.server.game.model.dto.*;
+import com.go.server.game.model.*;
 import com.go.server.game.session.model.BotDifficulty;
+import com.go.server.game.session.model.Player;
 import com.go.server.game.session.model.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +27,15 @@ public class GnuGoGameEngine implements GameEngine {
     private static final String GTP_LIST_STONES_BLACK = "list_stones black";
     private static final String GTP_LIST_STONES_WHITE = "list_stones white";
     private static final String GTP_LEVEL = "level ";
+    private static final String GTP_FINAL_SCORE = "final_score";
+    private static final String GTP_RESPONSE_PREFIX = "=";
+
+    private static final String COLOR_BLACK = "black";
+    private static final String COLOR_WHITE = "white";
+    private static final String MOVE_PASS = "PASS";
+
+    private static final String SCORE_BLACK_PREFIX = "B+";
+    private static final String SCORE_WHITE_PREFIX = "W+";
 
     private static final String KOMI_VALUE = "5.5";
 
@@ -45,7 +54,7 @@ public class GnuGoGameEngine implements GameEngine {
     private int gnuGoPort;
 
     @Override
-    public GameDto processMove(Session session, DeviceMove move) {
+    public Game processMove(Session session, DeviceMove move) {
         try (Socket socket = new Socket(gnuGoHost, gnuGoPort);
              BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
@@ -54,17 +63,17 @@ public class GnuGoGameEngine implements GameEngine {
 
             // Play the new move
             String color = determineNextColor(session.getMoves());
-            String moveCoord = move.getType() == DeviceMove.MoveType.PASS ? "PASS" : toGtpCoord(move.getX(), move.getY(), session.getBoardSize());
+            String moveCoord = move.getType() == DeviceMove.MoveType.PASS ? MOVE_PASS : toGtpCoord(move.getX(), move.getY(), session.getBoardSize());
             
             String response = sendGtp(writer, reader, GTP_PLAY + color + " " + moveCoord);
-            if (!response.startsWith("=")) {
+            if (!response.startsWith(GTP_RESPONSE_PREFIX)) {
                 throw new RuntimeException("Illegal move: " + response);
             }
 
             // Move legitimate, update session
-            session.addMove(moveCoord); // Store as GTP for simplicity, or DeviceMove json? keeping simple
+            session.addMove(moveCoord);
 
-            return buildGameDto(writer, reader, session, color.equalsIgnoreCase("black") ? "white" : "black");
+            return buildGame(writer, reader, session, color.equalsIgnoreCase(COLOR_BLACK) ? COLOR_WHITE : COLOR_BLACK);
 
         } catch (Exception e) {
             logger.error("GnuGo Game Engine failed", e);
@@ -88,8 +97,6 @@ public class GnuGoGameEngine implements GameEngine {
             String response = sendGtp(writer, reader, GTP_GENMOVE + color);
             Optional<DeviceMove> move = parseGnuGoResponse(response, session.getBoardSize());
             
-            // Do not add to session history here. caller will invoke processMove.
-            
             return move;
 
         } catch (Exception e) {
@@ -99,14 +106,14 @@ public class GnuGoGameEngine implements GameEngine {
     }
 
     @Override
-    public GameDto getGameState(Session session) {
+    public Game getGameState(Session session) {
         try (Socket socket = new Socket(gnuGoHost, gnuGoPort);
              BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
             setupGame(writer, reader, session);
             String nextColor = determineNextColor(session.getMoves());
-            return buildGameDto(writer, reader, session, nextColor);
+            return buildGame(writer, reader, session, nextColor);
 
         } catch (Exception e) {
             logger.error("GnuGo getGameState failed", e);
@@ -124,15 +131,15 @@ public class GnuGoGameEngine implements GameEngine {
         // Replay history
         List<String> moves = session.getMoves();
         logger.info("Replaying {} moves for session {}", moves.size(), session.getId());
-        String color = "black";
+        String color = COLOR_BLACK;
         for (String move : moves) {
             String resp = sendGtp(writer, reader, GTP_PLAY + color + " " + move);
             logger.debug("Replay move {}: {} -> {}", color, move, resp);
-            color = color.equals("black") ? "white" : "black";
+            color = color.equals(COLOR_BLACK) ? COLOR_WHITE : COLOR_BLACK;
         }
     }
 
-    private GameDto buildGameDto(BufferedWriter writer, BufferedReader reader, Session session, String nextColor) throws IOException {
+    private Game buildGame(BufferedWriter writer, BufferedReader reader, Session session, String nextColor) throws IOException {
         // Fetch stones
         String blackStones = sendGtp(writer, reader, GTP_LIST_STONES_BLACK);
         String whiteStones = sendGtp(writer, reader, GTP_LIST_STONES_WHITE);
@@ -142,34 +149,60 @@ public class GnuGoGameEngine implements GameEngine {
         logger.info("Stones found - Black: {}, White: {}", blackSet.size(), whiteSet.size());
 
         int size = session.getBoardSize();
-        List<List<IntersectionDto>> board = new ArrayList<>();
+        List<List<List<Intersection>>> board = new ArrayList<>();
+        List<List<Intersection>> singleBoard = new ArrayList<>();
 
         for (int y = 0; y < size; y++) {
-            List<IntersectionDto> row = new ArrayList<>();
+            List<Intersection> row = new ArrayList<>();
             for (int x = 0; x < size; x++) {
                 String coord = toGtpCoord(x, y, size);
-                StateDto state = StateDto.Empty;
-                if (blackSet.contains(coord)) state = StateDto.Black;
-                else if (whiteSet.contains(coord)) state = StateDto.White;
+                StoneState state = StoneState.Empty;
+                if (blackSet.contains(coord)) state = StoneState.Black;
+                else if (whiteSet.contains(coord)) state = StoneState.White;
                 
-                row.add(new IntersectionDto(new LocationDto(x, y), state));
+                row.add(new Intersection(new Location(x, y), state));
             }
-            board.add(row);
+            singleBoard.add(row);
         }
         
         // Wrap in single history list
-        List<List<List<IntersectionDto>>> positions = Collections.singletonList(board);
+        board.add(singleBoard);
         
-        return new GameDto(
-                new SettingsDto(session.getBoardSize()),
-                nextColor.substring(0, 1).toUpperCase() + nextColor.substring(1).toLowerCase(), // Capitalized "Black"/"White"
-                nextColor.equalsIgnoreCase("black") ? "White" : "Black", // Passive
-                positions
+        // Check for double pass
+        List<String> moves = session.getMoves();
+        boolean isGameEnded = false;
+        if (moves.size() >= 2) {
+            String lastMove = moves.get(moves.size() - 1);
+            String secondLastMove = moves.get(moves.size() - 2);
+            if (MOVE_PASS.equalsIgnoreCase(lastMove) && MOVE_PASS.equalsIgnoreCase(secondLastMove)) {
+                isGameEnded = true;
+            }
+        }
+
+        String activeColorStr = nextColor;
+        String passiveColorStr = nextColor.equalsIgnoreCase(COLOR_BLACK) ? COLOR_WHITE : COLOR_BLACK;
+
+        Player activePlayer = session.getPlayers().stream()
+                .filter(p -> p.getColor().name().equalsIgnoreCase(activeColorStr))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Active player not found for color: " + activeColorStr));
+
+        Player passivePlayer = session.getPlayers().stream()
+                .filter(p -> p.getColor().name().equalsIgnoreCase(passiveColorStr))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Passive player not found for color: " + passiveColorStr));
+
+        return new Game(
+                session.getBoardSize(),
+                activePlayer,
+                passivePlayer,
+                board,
+                isGameEnded
         );
     }
     
     private Set<String> parseStoneList(String response) {
-        if (!response.startsWith("=")) return Collections.emptySet();
+        if (!response.startsWith(GTP_RESPONSE_PREFIX)) return Collections.emptySet();
         String list = response.substring(1).trim();
         if (list.isEmpty()) return Collections.emptySet();
         return Arrays.stream(list.split("\\s+"))
@@ -178,7 +211,7 @@ public class GnuGoGameEngine implements GameEngine {
     }
 
     private String determineNextColor(List<String> moves) {
-        return (moves.size() % 2 == 0) ? "black" : "white";
+        return (moves.size() % 2 == 0) ? COLOR_BLACK : COLOR_WHITE;
     }
 
     private String sendGtp(BufferedWriter writer, BufferedReader reader, String command) throws IOException {
@@ -208,7 +241,7 @@ public class GnuGoGameEngine implements GameEngine {
     }
 
     private Optional<DeviceMove> parseGnuGoResponse(String response, int size) {
-        if (!response.startsWith("=")) return Optional.empty();
+        if (!response.startsWith(GTP_RESPONSE_PREFIX)) return Optional.empty();
         String moveStr = response.substring(1).trim();
         if (moveStr.equalsIgnoreCase(DeviceMove.PASS_ID)) return Optional.of(DeviceMove.pass());
         
@@ -223,6 +256,59 @@ public class GnuGoGameEngine implements GameEngine {
         return Optional.of(DeviceMove.at(x, y));
     }
     
+    @Override
+    public EndGame getScore(Session session) {
+        try (Socket socket = new Socket(gnuGoHost, gnuGoPort);
+             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+
+            setupGame(writer, reader, session);
+            
+            String response = sendGtp(writer, reader, GTP_FINAL_SCORE);
+            return parseFinalScore(response, session);
+
+        } catch (Exception e) {
+            logger.error("GnuGo getScore failed", e);
+            throw new RuntimeException("Game Engine Score Error", e);
+        }
+    }
+
+    private EndGame parseFinalScore(String response, Session session) {
+        if (!response.startsWith(GTP_RESPONSE_PREFIX)) {
+            throw new RuntimeException("GnuGo failed to calculate score: " + response);
+        }
+
+        String scoreStr = response.substring(1).trim(); // e.g. "B+10.5" or "W+5.0"
+        logger.info("GnuGo Final Score: {}", scoreStr);
+
+        double score = 0.0;
+        String winnerColor = "Draw";
+
+        if (scoreStr.toUpperCase().startsWith(SCORE_BLACK_PREFIX)) {
+            winnerColor = "BLACK";
+            try {
+                score = Double.parseDouble(scoreStr.substring(SCORE_BLACK_PREFIX.length()));
+            } catch (NumberFormatException e) {
+                // Handle "B+Resign" etc if needed, though final_score usually returns numbers
+                logger.warn("Could not parse score: {}", scoreStr);
+            }
+        } else if (scoreStr.toUpperCase().startsWith(SCORE_WHITE_PREFIX)) {
+            winnerColor = "WHITE";
+            try {
+                score = Double.parseDouble(scoreStr.substring(SCORE_WHITE_PREFIX.length()));
+            } catch (NumberFormatException e) {
+                 logger.warn("Could not parse score: {}", scoreStr);
+            }
+        }
+
+        String finalWinnerColor = winnerColor;
+        List<Player> winners = session.getPlayers().stream()
+                .filter(p -> p.getColor().name().equalsIgnoreCase(finalWinnerColor))
+                .toList();
+
+        return new EndGame(score, winners);
+    }
+
     private int mapDifficultyToLevel(BotDifficulty difficulty) {
          return Optional.ofNullable(difficulty)
                 .map(d -> switch (d) {

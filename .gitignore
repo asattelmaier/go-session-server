@@ -37,5 +37,5 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 google-credentials.json
-# Local run script
-run_local.sh
+# Local configuration
+scripts/.env.local

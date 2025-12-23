@@ -91,8 +91,19 @@ class SessionServiceSpec extends Specification {
         
         def move = DeviceMove.at(3, 3)
 
-        def gameDto = Mock(GameDto)
-        gameDto.activePlayer >> "White"
+        def activePlayer = Mock(com.go.server.game.session.model.Player)
+        activePlayer.toDto() >> new com.go.server.game.session.model.output.PlayerDto("p1", "Black", false)
+        activePlayer.getColor() >> com.go.server.game.session.model.Colors.BLACK
+
+        def passivePlayer = Mock(com.go.server.game.session.model.Player)
+        passivePlayer.toDto() >> new com.go.server.game.session.model.output.PlayerDto("p2", "White", false)
+
+        def game = Mock(com.go.server.game.model.Game)
+        game.getBoardSize() >> 9
+        game.getActivePlayer() >> activePlayer
+        game.getPassivePlayer() >> passivePlayer
+        game.isGameEnded() >> false
+        game.getPositions() >> [] // Empty board for simplicity of test (stream of empty list)
 
         when:
         repository.findSession("some-id") >> Optional.of(session)
@@ -104,11 +115,10 @@ class SessionServiceSpec extends Specification {
         service.updateSession("some-id", move)
 
         then:
-        1 * gameEngine.processMove(session, _ as DeviceMove) >> gameDto
+        1 * gameEngine.processMove(session, _ as DeviceMove) >> game
         1 * session.update()
         // Broadcasts game state
         1 * messageHandler.send(_ as SimpleMessage)
-        // No bot logic triggered? activePlayer is "White", but no players mocked in session.
     }
 
     def 'join a session'() {

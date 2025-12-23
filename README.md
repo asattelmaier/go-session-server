@@ -26,18 +26,14 @@ This project uses **Maven** and the **Spock Framework** for testing.
 ./mvnw clean package
 
 # Run all tests (Unit + Integration)
-./mvnw test
+./scripts/test_local.sh
 ```
 
 ## Running Locally (Docker Compose)
 
 The easiest way to run the full stack (Session Server + GnuGo + Firestore Emulator) is via Docker Compose.
 
-1.  Ensure you have `google-credentials.json` (if needed for production mode) or use the emulator profile.
-2.  Start the stack:
-
-```bash
-docker compose -f ./docker/docker-compose.yml up --build
+./scripts/run_local.sh
 ```
 
 This will spin up:
