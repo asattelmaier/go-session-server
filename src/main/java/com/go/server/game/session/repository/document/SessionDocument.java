@@ -4,8 +4,6 @@ import com.go.server.game.session.model.BotDifficulty;
 import com.go.server.game.session.model.Session;
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.annotation.DocumentId;
-import org.slf4j.LoggerFactory;
-
 import java.sql.Date;
 import java.time.Instant;
 import java.util.List;
@@ -54,9 +52,6 @@ public class SessionDocument {
             document.moves.forEach(session::addMove);
         }
         
-        LoggerFactory.getLogger(SessionDocument.class).info("Loaded session {} from document. boardSize: {}, moves.size: {}", 
-                session.getId(), session.getBoardSize(), (document.moves != null ? document.moves.size() : 0));
-                
         return session;
     }
 

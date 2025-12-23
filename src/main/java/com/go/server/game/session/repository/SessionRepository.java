@@ -2,6 +2,7 @@ package com.go.server.game.session.repository;
 
 import com.go.server.game.session.model.Session;
 import com.go.server.game.session.repository.document.SessionDocument;
+import com.google.cloud.firestore.FieldPath;
 import com.google.cloud.firestore.Firestore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.IntStream;
 import java.util.concurrent.ExecutionException;
 import com.go.server.game.session.exception.SessionNotFoundException;
 
@@ -67,21 +69,31 @@ public class SessionRepository {
     }
 
     public void removeSessions(final List<Session> sessions) {
-        final var sessionIds = sessions.stream().map(Session::getId).toList();
+        final int batchSize = 30; // Firestore limit for 'IN' queries
+
+        IntStream.iterate(0, i -> i < sessions.size(), i -> i + batchSize)
+                .mapToObj(i -> sessions.subList(i, Math.min(i + batchSize, sessions.size())))
+                .forEach(this::removeSessionBatch);
+    }
+
+    private void removeSessionBatch(final List<Session> batch) {
+        final var sessionIds = batch.stream().map(Session::getId).toList();
 
         try {
-            firestore
+            final var documents = firestore
                     .collection(SessionDocument.COLLECTION_NAME)
-                    .whereIn(SessionDocument.ID_FIELD_NAME, sessionIds)
+                    .whereIn(FieldPath.documentId(), sessionIds)
                     .get()
                     .get()
-                    .getDocuments()
-                    .forEach(mapping -> firestore
-                            .collection(SessionDocument.COLLECTION_NAME)
-                            .document(mapping.getId())
-                            .delete());
+                    .getDocuments();
+
+            if (!documents.isEmpty()) {
+                final var batchWrite = firestore.batch();
+                documents.forEach(doc -> batchWrite.delete(doc.getReference()));
+                batchWrite.commit().get();
+            }
         } catch (ExecutionException | InterruptedException error) {
-            logger.error("Error during removing sessions: {}", error.getMessage());
+            logger.error("Error during removing sessions batch: {}", error.getMessage());
         }
     }
 
