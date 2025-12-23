@@ -1,12 +1,17 @@
 package com.go.server.game.session;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.Valid;
+import java.security.Principal;
 import com.go.server.game.session.model.Session;
 import com.go.server.game.model.DeviceMove;
 import com.go.server.game.session.model.GameCommandType;
 import com.go.server.game.session.model.input.CreateSessionDto;
 import com.go.server.game.session.model.output.SessionDto;
 import com.go.server.user.exception.InvalidUserIdException;
+import com.go.server.user.UserService;
+import com.go.server.user.model.User;
+import java.util.UUID;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
@@ -26,51 +31,26 @@ import org.springframework.stereotype.Controller;
 public class SessionWebsocketController {
     private final Logger logger = LoggerFactory.getLogger(SessionWebsocketController.class);
     private final SessionService sessionService;
+    private final UserService userService;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Map<GameCommandType, BiConsumer<String, Map<String, Object>>> commandHandlers;
-
-    public SessionWebsocketController(@NonNull final SessionService sessionService) {
+    public SessionWebsocketController(@NonNull final SessionService sessionService,
+                                      @NonNull final UserService userService) {
         this.sessionService = sessionService;
-        this.commandHandlers = new EnumMap<>(GameCommandType.class);
-        initializeCommandHandlers();
+        this.userService = userService;
     }
 
-    private void initializeCommandHandlers() {
-        commandHandlers.put(GameCommandType.CREATE, (sessionId, payload) -> {
-            logger.info("Re-initializing game state for session: {}", sessionId);
-            sessionService.initializeGame(sessionId);
-        });
 
-        commandHandlers.put(GameCommandType.PLAY, (sessionId, payload) -> {
-            Optional.ofNullable(payload.get("location"))
-                    .map(loc -> objectMapper.convertValue(loc, DeviceMove.class))
-                    .ifPresent(move -> sessionService.updateSession(sessionId, move));
-        });
-
-        commandHandlers.put(GameCommandType.PASS, (sessionId, payload) -> 
-            sessionService.updateSession(sessionId, DeviceMove.pass())
-        );
-
-        commandHandlers.put(GameCommandType.UNKNOWN, (sessionId, payload) -> 
-            logger.warn("Unknown command received in update")
-        );
-    }
 
     @MessageMapping("/create")
     @SendToUser("/game/session/created")
-    public SessionDto createSession(@Payload @NonNull final CreateSessionDto createSessionDto) {
-        try {
-            logger.info("Create session request received: {}", createSessionDto);
+    public SessionDto createSession(@Payload @NonNull @Valid final CreateSessionDto createSessionDto) {
+        logger.info("Create session request received: {}", createSessionDto);
+        
+        final var player = userService.getUserByName(createSessionDto.getPlayerId());
+        final var sessionDto = sessionService.createSession(player, createSessionDto.getDifficulty(), createSessionDto.getBoardSize());
+        logger.info("Session \"{}\" created", sessionDto.id);
 
-            final var sessionDto = sessionService.createSession(createSessionDto);
-            logger.info("Session \"{}\" created", sessionDto.id);
-
-            return sessionDto;
-        } catch (InvalidUserIdException error) {
-            logger.error(error.getMessage());
-
-            return Session.invalidPlayerId(createSessionDto.getPlayerId()).toDto();
-        }
+        return sessionDto;
     }
 
     @MessageMapping("/{sessionId}/terminate")
@@ -81,8 +61,16 @@ public class SessionWebsocketController {
 
     @MessageMapping("/{sessionId}/update")
     @SuppressWarnings("unchecked")
-    public void updateSession(@NonNull @DestinationVariable final String sessionId, @Payload @NonNull final Map<String, Object> payload) {
+    public void updateSession(Principal principal, @NonNull @DestinationVariable final String sessionId, @Payload @NonNull final Map<String, Object> payload) {
         logger.info("Session \"{}\" received update payload: {}", sessionId, payload);
+
+        if (principal == null) {
+            logger.warn("Unauthenticated update attempt for session {}", sessionId);
+            return;
+        }
+        
+        final String username = principal.getName();
+        final var player = userService.getUserByName(username);
 
         Optional.ofNullable(payload.get("command"))
                 .filter(Map.class::isInstance)
@@ -90,21 +78,31 @@ public class SessionWebsocketController {
                 .map(cmd -> String.valueOf(cmd.get("name")))
                 .map(GameCommandType::fromString)
                 .ifPresentOrElse(
-                        commandType -> handleCommand(sessionId, commandType, (Map<String, Object>) payload.get("command")),
-                        () -> handleLegacyPayload(sessionId, payload)
+                        commandType -> handleCommand(sessionId, player, commandType, (Map<String, Object>) payload.get("command")),
+                        () -> handleLegacyPayload(sessionId, player, payload)
                 );
     }
 
-    private void handleCommand(String sessionId, GameCommandType commandType, Map<String, Object> commandPayload) {
-        commandHandlers.getOrDefault(commandType, commandHandlers.get(GameCommandType.UNKNOWN))
-                .accept(sessionId, commandPayload);
+    private void handleCommand(String sessionId, User player, GameCommandType commandType, Map<String, Object> commandPayload) {
+
+        switch (commandType) {
+            case PLAY -> {
+                Optional.ofNullable(commandPayload.get("location"))
+                    .map(loc -> objectMapper.convertValue(loc, DeviceMove.class))
+                    .ifPresent(move -> sessionService.updateSession(sessionId, player, move));
+            }
+            case PASS -> sessionService.updateSession(sessionId, player, DeviceMove.pass());
+            case CREATE -> sessionService.initializeGame(sessionId);
+            default -> logger.warn("Unknown command received in update");
+        }
     }
 
-    private void handleLegacyPayload(String sessionId, Map<String, Object> payload) {
+    private void handleLegacyPayload(String sessionId, User player, Map<String, Object> payload) {
         try {
             Optional.ofNullable(objectMapper.convertValue(payload, DeviceMove.class))
                     .filter(move -> move.getType() != null)
-                    .ifPresent(move -> sessionService.updateSession(sessionId, move));
+                    .filter(move -> move.getType() != null)
+                    .ifPresent(move -> sessionService.updateSession(sessionId, player, move));
         } catch (Exception e) {
             logger.error("Failed to parse update payload for session {}: {}", sessionId, payload);
         }
@@ -113,17 +111,12 @@ public class SessionWebsocketController {
     @MessageMapping("/{sessionId}/join")
     @SendToUser("/game/session/joined")
     public SessionDto joinSession(java.security.Principal principal, @Header("simpSessionId") final String sessionIdHeader, @NonNull @DestinationVariable final String sessionId) {
-        try {
-            final String playerId = principal != null ? principal.getName() : sessionIdHeader;
-            logger.info("Player joins the session \"{}\" (Player ID: {})", sessionId, playerId);
-            final var sessionDto = this.sessionService.joinSession(playerId, sessionId);
-            logger.info("Player joined the session \"{}\"", sessionId);
+        final String playerIdentifier = principal != null ? principal.getName() : sessionIdHeader;
+        final var player = userService.getUserByName(playerIdentifier);
+        logger.info("Player joins the session \"{}\" (Player ID: {})", sessionId, player.getId());
+        final var sessionDto = this.sessionService.joinSession(player, sessionId);
+        logger.info("Player joined the session \"{}\"", sessionId);
 
-            return sessionDto;
-        } catch (InvalidUserIdException error) {
-            logger.error(error.getMessage());
-
-            return Session.invalidPlayerId(principal != null ? principal.getName() : sessionIdHeader).toDto();
-        }
+        return sessionDto;
     }
 }

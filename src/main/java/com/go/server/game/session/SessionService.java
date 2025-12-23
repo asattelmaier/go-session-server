@@ -1,6 +1,7 @@
 package com.go.server.game.session;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.go.server.game.session.exception.InvalidMoveException;
 
 import com.go.server.game.engine.GameEngine;
 import com.go.server.game.message.handler.MessageHandler;
@@ -17,7 +18,9 @@ import com.go.server.game.session.model.Session;
 import com.go.server.game.session.model.input.CreateSessionDto;
 import com.go.server.game.session.model.output.SessionDto;
 import com.go.server.game.session.repository.SessionRepository;
+import com.go.server.user.model.User;
 import com.go.server.user.UserService;
+import com.go.server.user.exception.InvalidUserIdException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -38,24 +41,26 @@ public class SessionService {
     private final SessionRepository repository;
     private final MessageHandler messageHandler;
     private final GameEngine gameEngine;
+    private final UserService userService;
     private final Logger logger = LoggerFactory.getLogger(SessionService.class);
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
-    public SessionService(final SessionRepository repository, final MessageHandler messageHandler, final GameEngine gameEngine) {
+    public SessionService(final SessionRepository repository, 
+                          final MessageHandler messageHandler, 
+                          final GameEngine gameEngine,
+                          final UserService userService) {
         this.repository = repository;
         this.messageHandler = messageHandler;
         this.gameEngine = gameEngine;
+        this.userService = userService;
     }
 
-    public SessionDto createSession(final CreateSessionDto createSessionDto) {
-        final var playerId = UserService.userIdFromString(createSessionDto.getPlayerId());
+    public SessionDto createSession(final User player, final BotDifficulty difficulty, final Integer boardSize) {
         
-        repository.getSessionByPlayerId(playerId).ifPresent(openSession -> {
-            logger.info("Found existing session {} for player {}. Terminating it.", openSession.getId(), playerId);
+        repository.getSessionByPlayerId(player.getId()).ifPresent(openSession -> {
+            logger.info("Found existing session {} for player {}. Terminating it.", openSession.getId(), player.getId());
             terminateSession(openSession.getId());
         });
 
-        return createNewSession(playerId, createSessionDto.getDifficulty(), createSessionDto.getBoardSize()).toDto();
+        return createNewSession(player.getId(), difficulty, boardSize).toDto();
     }
 
     public void terminateSession(final String sessionId) {
@@ -65,11 +70,23 @@ public class SessionService {
         messageHandler.send(new TerminatedMessage(session.toDto()));
     }
 
-    public void updateSession(final String sessionId, final DeviceMove move) {
+    public void updateSession(final String sessionId, final User player, final DeviceMove move) {
         final var session = repository.getSession(sessionId);
+        
+        Game game = gameEngine.getGameState(session);
+        validateTurn(game, player.getId());
+        
         processHumanMove(session, move);
         session.update();
         repository.updateSession(session);
+    }
+    
+    private void validateTurn(Game game, UUID requestorId) {
+        UUID activePlayerId = game.getActivePlayer().getId();
+        
+        if (!activePlayerId.equals(requestorId)) {
+             throw new InvalidMoveException("It is not your turn!");
+        }
     }
 
     public void initializeGame(final String sessionId) {
@@ -127,9 +144,9 @@ public class SessionService {
         });
     }
 
-    public SessionDto joinSession(final String playerId, final String sessionId) {
-        final var player = Player.human(UserService.userIdFromString(playerId), Colors.WHITE);
-        final var sessionDto = addPlayer(player, sessionId).toDto();
+    public SessionDto joinSession(final User player, final String sessionId) {
+        final var gamePlayer = Player.human(player.getId(), Colors.WHITE);
+        final var sessionDto = addPlayer(gamePlayer, sessionId).toDto();
         messageHandler.send(new JoinedMessage(sessionDto));
         return sessionDto;
     }
@@ -181,4 +198,5 @@ public class SessionService {
         repository.removeSessions(unusedSessions);
         logger.info("Number of unused Sessions removed: {}", unusedSessions.size());
     }
+
 }

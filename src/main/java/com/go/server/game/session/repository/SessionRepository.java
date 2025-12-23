@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import com.go.server.game.session.exception.SessionNotFoundException;
 
 @Repository
 public class SessionRepository {
@@ -102,7 +103,7 @@ public class SessionRepository {
 
     public Session getSession(final String sessionId) {
         return findSession(sessionId)
-                .orElseThrow(() -> new java.util.NoSuchElementException("Session with id " + sessionId + " not found"));
+                .orElseThrow(() -> new SessionNotFoundException(sessionId));
     }
 
     public Session updateSession(final Session session) {

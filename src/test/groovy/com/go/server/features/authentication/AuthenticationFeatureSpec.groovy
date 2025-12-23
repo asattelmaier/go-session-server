@@ -1,7 +1,8 @@
 package com.go.server.features.authentication
 
 import com.go.server.BaseIntegrationSpec
-
+import com.go.server.game.session.model.input.CreateSessionDto
+import java.util.concurrent.TimeUnit
 
 class AuthenticationFeatureSpec extends BaseIntegrationSpec {
 
@@ -105,5 +106,21 @@ class AuthenticationFeatureSpec extends BaseIntegrationSpec {
 
         then: "Access is forbidden"
         profile == null
+    }
+    def "User cannot perform actions with non-existent user"() {
+        given: "A connected user"
+        def user = registerUser(createUsername())
+        connect(user)
+
+        and: "A CreateSessionDto with a non-existent username"
+        def invalidDto = new CreateSessionDto("not-a-username", null, 19)
+
+        when: "The user attempts to create a session"
+        def error = expectError(user) {
+            sendCreateGame(user, invalidDto)
+        }
+        
+        then: "An error is returned"
+        error.code == "USER_NOT_FOUND"
     }
 }

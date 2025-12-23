@@ -121,4 +121,57 @@ class GameSetupFeatureSpec extends BaseIntegrationSpec {
         where:
         difficulty << [BotDifficulty.EASY, BotDifficulty.MEDIUM, BotDifficulty.HARD]
     }
+
+    def "User cannot create a game with invalid rules"() {
+        given: "An authenticated user"
+        def user = registerUser(createUsername())
+        connect(user)
+
+        and: "A request with invalid board size"
+        def invalidDto = new CreateSessionDto(user.username, null, 5)
+
+        when: "The user attempts to create a session"
+        def error = expectError(user) {
+            sendCreateGame(user, invalidDto)
+        }
+
+        then: "A validation error is returned"
+        error.code == "BAD_REQUEST"
+    }
+
+    def "User cannot join a non-existent session"() {
+        given: "An authenticated user"
+        def user = registerUser(createUsername())
+        connect(user)
+
+        when: "The user attempts to join a random session UUID"
+        def error = expectError(user) {
+            sendJoinGame(user, UUID.randomUUID().toString())
+        }
+
+        then: "A Session Not Found error is returned"
+        error.code == "SESSION_NOT_FOUND"
+    }
+
+    def "User cannot join a full session"() {
+        given: "A game with 2 players"
+        def userA = registerUser(createUsername())
+        connect(userA)
+        def game = createGame(userA, 19)
+        def userB = registerUser(createUsername())
+        connect(userB)
+        joinGame(userB, game.id)
+
+        and: "A third user"
+        def userC = registerUser(createUsername())
+        connect(userC)
+
+        when: "User C attempts to join the active game"
+        def error = expectError(userC) {
+            sendJoinGame(userC, game.id)
+        }
+
+        then: "A Session Full error is returned"
+        error.code == "SESSION_FULL"
+    }
 }

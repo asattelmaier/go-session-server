@@ -15,6 +15,7 @@ import java.net.Socket;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import com.go.server.game.session.exception.InvalidMoveException;
 
 @Service
 public class GnuGoGameEngine implements GameEngine {
@@ -67,7 +68,7 @@ public class GnuGoGameEngine implements GameEngine {
             
             String response = sendGtp(writer, reader, GTP_PLAY + color + " " + moveCoord);
             if (!response.startsWith(GTP_RESPONSE_PREFIX)) {
-                throw new RuntimeException("Illegal move: " + response);
+                throw new InvalidMoveException("Illegal move: " + response);
             }
 
             // Move legitimate, update session
@@ -75,6 +76,8 @@ public class GnuGoGameEngine implements GameEngine {
 
             return buildGame(writer, reader, session, color.equalsIgnoreCase(COLOR_BLACK) ? COLOR_WHITE : COLOR_BLACK);
 
+        } catch (InvalidMoveException e) {
+            throw e;
         } catch (Exception e) {
             logger.error("GnuGo Game Engine failed", e);
             throw new RuntimeException("Game Engine Error", e);

@@ -1,38 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
     
-    <!-- Profile for Local Development (Console Text) -->
-    <springProfile name="dev">
-        <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
-        <root level="INFO">
-            <appender-ref ref="CONSOLE" />
-        </root>
-    </springProfile>
-
-    <!-- Profile for Production (JSON) -->
-    <springProfile name="prod">
-        <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-                <includeMdcKeyName>sessionId</includeMdcKeyName>
-                <includeMdcKeyName>playerId</includeMdcKeyName>
-            </encoder>
-        </appender>
-        <root level="INFO">
-            <appender-ref ref="JSON_CONSOLE" />
-        </root>
-    </springProfile>
-    
-    <!-- Fallback if no profile is active (Default to JSON for safety in cloud) -->
-    <springProfile name="!dev &amp; !prod">
-         <appender name="JSON_CONSOLE_DEFAULT" class="ch.qos.logback.core.ConsoleAppender">
-            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-                <includeMdcKeyName>sessionId</includeMdcKeyName>
-                <includeMdcKeyName>playerId</includeMdcKeyName>
-            </encoder>
-        </appender>
-        <root level="INFO">
-            <appender-ref ref="JSON_CONSOLE_DEFAULT" />
-        </root>
-    </springProfile>
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
 </configuration>

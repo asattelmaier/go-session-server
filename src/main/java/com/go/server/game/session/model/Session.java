@@ -1,6 +1,7 @@
 package com.go.server.game.session.model;
 
 import com.go.server.game.session.model.output.SessionDto;
+import com.go.server.game.session.exception.SessionFullException;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -106,6 +107,9 @@ public class Session {
     }
 
     public void addPlayer(final Player player) {
+        if (players.size() >= PLAYERS_PER_SESSION) {
+            throw new SessionFullException("Session " + id + " is full");
+        }
         players.add(player);
     }
 

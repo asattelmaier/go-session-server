@@ -7,26 +7,27 @@ import org.springframework.web.socket.config.annotation.*;
 
 import java.net.URI;
 
+import static com.go.server.configuration.WebSocketConfigConstants.*;
+
 @Configuration
 @EnableWebSocketMessageBroker
 public class SessionConfig implements WebSocketMessageBrokerConfigurer {
     private final static int MESSAGE_BUFFER_SIZE = 1000 * 1024;
-    public final static String DESTINATION_PREFIX = "/game/session";
-    private final static String ALLOWED_ORIGIN = "*";
-    private final static String ENDPOINT = "/";
+
     @Override
     public void configureWebSocketTransport(final WebSocketTransportRegistration registry) {
-         registry.setMessageSizeLimit(SessionConfig.MESSAGE_BUFFER_SIZE);
+         registry.setMessageSizeLimit(MESSAGE_BUFFER_SIZE);
      }
  
      @Override
      public void registerStompEndpoints(final StompEndpointRegistry registry) {
-         registry.addEndpoint(SessionConfig.ENDPOINT).setAllowedOrigins(SessionConfig.ALLOWED_ORIGIN);
+         registry.addEndpoint(ENDPOINT).setAllowedOrigins(ALLOWED_ORIGINS);
      }
  
      @Override
-     public void configureMessageBroker(final MessageBrokerRegistry registry) {
-         registry.enableSimpleBroker(SessionConfig.DESTINATION_PREFIX);
-         registry.setApplicationDestinationPrefixes(SessionConfig.DESTINATION_PREFIX);
-     }
+    public void configureMessageBroker(final MessageBrokerRegistry registry) {
+        registry.enableSimpleBroker(DESTINATION_PREFIX, QUEUE_PREFIX, TOPIC_PREFIX);
+        registry.setApplicationDestinationPrefixes(DESTINATION_PREFIX);
+        registry.setUserDestinationPrefix(USER_DESTINATION_PREFIX);
+    }
 }

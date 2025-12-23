@@ -46,15 +46,17 @@ class GameMechanicsFeatureSpec extends BaseIntegrationSpec {
 
 
 
-        when: "Player 1 Passes"
+        when: "Player 1 Plays"
         playMove(userA, UUID.fromString(game.id), 0, 0)
-        passTurn(userA, UUID.fromString(game.id))
 
         and: "Player 2 Passes"
+        passTurn(userB, UUID.fromString(game.id))
+
+        and: "Player 1 Passes (Double Pass)"
         def endGameFuture = new CompletableFuture<Map>()
         subscribe(userB.session, "/game/session/${game.id}/endgame", Map, endGameFuture)
         
-        def finalUpdate = passTurn(userB, UUID.fromString(game.id))
+        def finalUpdate = passTurn(userA, UUID.fromString(game.id))
 
         then: "The game marks itself as ended"
         finalUpdate.isGameEnded == true
@@ -76,5 +78,52 @@ class GameMechanicsFeatureSpec extends BaseIntegrationSpec {
 
         then: "The update confirms the move"
         update.activePlayer.color == "White"
+    }
+
+    def "User cannot play on an occupied intersection"() {
+        given: "A running 9x9 game"
+        def game = createGame(userA, 9)
+        joinGame(userB, game.id)
+
+        and: "Player 1 plays at 0,0"
+        playMove(userA, UUID.fromString(game.id), 0, 0)
+
+        when: "Player 2 tries to play at 0,0"
+        def error = expectError(userB) {
+            sendPlayMove(userB, game.id, 0, 0)
+        }
+
+        then: "An Invalid Move error is returned"
+        error.code == "INVALID_MOVE"
+    }
+
+    def "User cannot play when it is not their turn"() {
+        given: "A running 9x9 game (Black starts)"
+        def game = createGame(userA, 9)
+        joinGame(userB, game.id)
+
+        when: "Player 2 (White) tries to play first"
+        def error = expectError(userB) {
+            sendPlayMove(userB, game.id, 5, 5)
+        }
+
+        then: "An Invalid Move error is returned"
+        error.code == "INVALID_MOVE"
+    }
+    def "Guest User should be able to create game and play move"() {
+        given: "A registered guest user"
+        def user = registerGuest()
+        assert user != null
+        assert user.isRegistered()
+        assert user.username.startsWith("Guest-")
+        connect(user)
+
+        when: "Guest creates a game and plays a move"
+        def game = createGame(user, 9, BotDifficulty.EASY)
+        def update = playMove(user, UUID.fromString(game.id), 2, 2)
+
+        then: "Move is accepted and stone is placed"
+        update != null
+        update.positions.flatten().find { it.location.x == 2 && it.location.y == 2 }.state == "Black"
     }
 }

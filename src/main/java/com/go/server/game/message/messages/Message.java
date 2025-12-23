@@ -2,7 +2,7 @@ package com.go.server.game.message.messages;
 
 import org.springframework.web.util.UriComponentsBuilder;
 
-import static com.go.server.configuration.SessionConfig.DESTINATION_PREFIX;
+import static com.go.server.configuration.WebSocketConfigConstants.DESTINATION_PREFIX;
 
 public class Message {
     final String sessionId;

@@ -33,7 +33,7 @@ import java.lang.reflect.Type
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT, properties = [
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = [
     "FIRESTORE_EMULATOR_ENABLED=true",
     "FIRESTORE_EMULATOR_HOST_PORT=localhost:9000",
     "FIRESTORE_EMULATOR_PROJECT_ID=local-project",
@@ -105,8 +105,13 @@ abstract class BaseIntegrationSpec extends Specification {
     protected TestUser registerUser(String username, String password) {
         def dto = [username: username, password: password]
         def response = postRaw("/auth/register", dto)
-        if (response.status != 200) return new TestUser(username, password, null)
-        return new TestUser(username, password, new TokensDto(response.body.accessToken, response.body.refreshToken))
+        if (response.status != 200) return new TestUser(null, username, password, null)
+        
+        def tokens = new TokensDto(response.body.accessToken, response.body.refreshToken)
+        def tempUser = new TestUser(null, username, password, tokens)
+        def profile = getProfile(tempUser)
+        
+        return new TestUser(UUID.fromString(profile.id), username, password, tokens)
     }
 
     protected Map post(String path, Object body) {
@@ -178,6 +183,19 @@ abstract class BaseIntegrationSpec extends Specification {
         return registerUser(username, password)
     }
 
+    protected TestUser registerGuest() {
+        def response = postRaw("/auth/register/guest", [:])
+        if (response.status != 200) return null
+        
+        def tokens = new TokensDto(response.body.accessToken, response.body.refreshToken)
+        def tempUser = new TestUser(null, null, "guest-password", tokens)
+        
+        def profile = getProfile(tempUser)
+        if (profile == null) return null
+        
+        return new TestUser(UUID.fromString(profile.id), profile.username, "guest-password", tokens)
+    }
+
     protected StompSession connect(TestUser user) {
         user.session = connect(user.tokens.accessToken)
         return user.session
@@ -217,7 +235,7 @@ abstract class BaseIntegrationSpec extends Specification {
     }
 
     protected boolean hasPlayer(def game, TestUser user) {
-        return game.players.find { it.id == user.username } != null
+        return game.players.find { it.id == user.id.toString() } != null
     }
 
     protected boolean hasBot(def game, BotDifficulty difficulty) {
@@ -257,6 +275,16 @@ abstract class BaseIntegrationSpec extends Specification {
         return endGameFuture.get(TIMEOUT_SECONDS, TimeUnit.SECONDS)
     }
 
+    protected CompletableFuture<Map> subscribeToErrors(TestUser user) {
+        def errorFuture = new CompletableFuture<Map>()
+        subscribe(user.session, "/user/queue/errors", Map, errorFuture)
+        return errorFuture
+    }
+
+    protected Map waitForError(TestUser user) {
+        return subscribeToErrors(user).get(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+    }
+
     protected List waitForSessionInPendingList(TestUser user, Map game) {
         return waitForSessionInPendingList(user, UUID.fromString(game.id))
     }
@@ -277,7 +305,12 @@ abstract class BaseIntegrationSpec extends Specification {
         def dto = [username: username, password: password]
         def response = postRaw("/auth/authenticate", dto)
         if (response.status != 200) return null
-        return new TestUser(username, password, new TokensDto(response.body.accessToken, response.body.refreshToken))
+        
+        def tokens = new TokensDto(response.body.accessToken, response.body.refreshToken)
+        def tempUser = new TestUser(null, username, password, tokens)
+        def profile = getProfile(tempUser)
+        
+        return new TestUser(UUID.fromString(profile.id), username, password, tokens)
     }
 
     protected TokensDto refresh(String refreshToken) {
@@ -298,17 +331,39 @@ abstract class BaseIntegrationSpec extends Specification {
         HttpClients.createDefault().execute(post)
     }
 
+    protected Map expectError(TestUser user, Closure action) {
+        def errorFuture = subscribeToErrors(user)
+        action.call()
+        return errorFuture.get(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+    }
+
+    protected void sendCreateGame(TestUser user, CreateSessionDto dto) {
+        user.session.send("/game/session/create", dto)
+    }
+
+    protected void sendJoinGame(TestUser user, String sessionId) {
+        user.session.send("/game/session/${sessionId}/join", [:])
+    }
+
+    protected void sendPlayMove(TestUser user, String sessionId, int x, int y) {
+        user.session.send("/game/session/${sessionId}/update",
+            [command: [name: "Play", location: [x: x, y: y]]]
+        )
+    }
+
     protected void waitForTokenCycle() {
         Thread.sleep(1100)
     }
 
-    class TestUser {
+    static class TestUser {
+        UUID id
         String username
         String password
         TokensDto tokens
         StompSession session
         
-        TestUser(String username, String password, TokensDto tokens) {
+        TestUser(UUID id, String username, String password, TokensDto tokens) {
+            this.id = id
             this.username = username
             this.password = password
             this.tokens = tokens
