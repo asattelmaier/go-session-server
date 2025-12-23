@@ -5,6 +5,7 @@ import com.go.server.auth.model.input.RefreshTokenDto;
 import com.go.server.auth.model.input.RegisterUserDto;
 import com.go.server.auth.model.output.TokensDto;
 import com.go.server.user.model.User;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,7 +22,7 @@ public class AuthenticationController {
     }
 
     @PostMapping("/register")
-    public TokensDto register(@RequestBody RegisterUserDto dto) {
+    public TokensDto register(@RequestBody @Valid RegisterUserDto dto) {
         return authenticationService.register(dto);
     }
 

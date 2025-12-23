@@ -45,7 +45,9 @@ import java.util.concurrent.TimeUnit
     "GAME_CLIENT_SOCKET_PORT=8000",
     "gnugo.host=localhost",
     "gnugo.port=8001",
-    "spring.main.allow-bean-definition-overriding=true"
+    "spring.main.allow-bean-definition-overriding=true",
+    "spring.cloud.gcp.project-id=local-project",
+    "spring.cloud.gcp.core.credentials.enabled=false"
 ])
 
 abstract class BaseIntegrationSpec extends Specification {
@@ -54,11 +56,11 @@ abstract class BaseIntegrationSpec extends Specification {
     protected int port
 
     protected String getBaseUrl() {
-        return "http://localhost:${port}"
+        return "http://127.0.0.1:${port}"
     }
 
     protected String getWsUrl() {
-        return "ws://localhost:${port}/"
+        return "ws://127.0.0.1:${port}/"
     }
 
     protected static final int TIMEOUT_SECONDS = 30

@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 
 import static com.go.server.game.error.GameErrorCodes.*;
 import static com.go.server.configuration.WebSocketConfigConstants.ERROR_QUEUE;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -75,5 +78,18 @@ public class GlobalExceptionHandler {
     public ErrorDto handleGlobalException(Exception e) {
         logger.error("Unexpected Error", e);
         return new ErrorDto(INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
+    }
+
+    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorDto> handleRestValidationException(org.springframework.web.bind.MethodArgumentNotValidException e) {
+        logger.warn("Validation Error: {}", e.getMessage());
+        String message = e.getBindingResult().getAllErrors().get(0).getDefaultMessage();
+        return new ResponseEntity<>(new ErrorDto(BAD_REQUEST, "Validation Error: " + message), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ErrorDto> handleRestUserNotFoundException(UserNotFoundException e) {
+        logger.warn("User Not Found: {}", e.getMessage());
+        return new ResponseEntity<>(new ErrorDto(USER_NOT_FOUND, e.getMessage()), HttpStatus.NOT_FOUND);
     }
 }

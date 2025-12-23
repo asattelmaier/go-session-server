@@ -6,4 +6,4 @@ source "$SCRIPT_DIR/env.sh"
 
 echo "Running tests..."
 # Pass any arguments to mvnw (e.g. -Dtest=...)
-(cd "$SCRIPT_DIR/.." && ./mvnw test "$@")
+(cd "$SCRIPT_DIR/.." && ./mvnw verify "$@")

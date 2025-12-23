@@ -124,8 +124,11 @@
 				<configuration>
 					<includes>
 						<include>**/*Spec</include>
-						<include>**/*IntegrationSpec</include>
 					</includes>
+                    <excludes>
+                        <exclude>**/*FeatureSpec</exclude>
+                        <exclude>**/*IntegrationSpec</exclude>
+                    </excludes>
 				</configuration>
                 <executions>
                     <execution>
@@ -135,10 +138,11 @@
                         </goals>
                         <phase>integration-test</phase>
                         <configuration>
-							<excludes>
-								<exclude>none</exclude>
-							</excludes>
+                            <excludes>
+                                <exclude>none</exclude>
+                            </excludes>
                             <includes>
+                                <include>**/*FeatureSpec</include>
                                 <include>**/*IntegrationSpec</include>
                             </includes>
                         </configuration>
