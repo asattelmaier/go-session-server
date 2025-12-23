@@ -124,6 +124,6 @@ class GameMechanicsFeatureSpec extends BaseIntegrationSpec {
 
         then: "Move is accepted and stone is placed"
         update != null
-        update.positions.flatten().find { it.location.x == 2 && it.location.y == 2 }.state == "Black"
+        update.positions.last().rows.collectMany { it.cols }.find { it.location.x == 2 && it.location.y == 2 }.state == "Black"
     }
 }

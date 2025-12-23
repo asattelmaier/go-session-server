@@ -1,6 +1,8 @@
 package com.go.server.game.model;
 
 import com.go.server.game.model.dto.GameDto;
+import com.go.server.game.model.dto.BoardStateDto;
+import com.go.server.game.model.dto.IntersectionRowDto;
 import com.go.server.game.model.dto.IntersectionDto;
 import com.go.server.game.model.dto.SettingsDto;
 import com.go.server.game.session.model.Player;
@@ -42,12 +44,12 @@ public class Game {
     }
 
     public GameDto toDto() {
-        List<List<List<IntersectionDto>>> positionDtos = positions.stream()
-            .map(board -> board.stream()
-                .map(row -> row.stream()
+        List<BoardStateDto> positionDtos = positions.stream()
+            .map(board -> new BoardStateDto(board.stream()
+                .map(row -> new IntersectionRowDto(row.stream()
                     .map(Intersection::toDto)
-                    .toList())
-                .toList())
+                    .toList()))
+                .toList()))
             .toList();
 
         return new GameDto(
